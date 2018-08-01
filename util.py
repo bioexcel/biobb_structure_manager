@@ -36,13 +36,13 @@ def removeHFromRes (r, verbose=False):
         r.detach_child(at_id)
 
 def residueid(r, models=False):
-    rid = r.get_resname() + " " \
-        + str(r.get_parent().id) \
-        + str(r.id[1])
+    return r.get_resname() + " " + residuenum(r,models)
+
+def residuenum (r, models=False):
+    rn = str(r.get_parent().id) + str(r.id[1])
     if models:
-        rid += "/" + str(r.get_parent().get_parent().id)
-    
-    return rid
+        rn += "/" + str(r.get_parent().get_parent().id)
+    return rn
 
 def atomid(at, models=False):
     return residueid(at.get_parent(), models) + "." + at.id
