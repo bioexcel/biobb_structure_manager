@@ -5,11 +5,13 @@
 
 import re
 import sys
+import warnings
 
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBList import PDBList
 from Bio.PDB.PDBParser import PDBParser
+from Bio import BiopythonWarning
 
 import structure_manager.util as util
 
@@ -28,7 +30,7 @@ class StructureManager():
 
             try:
                 input_pdb_path = input_pdb_path[4:].upper()
-                real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path)
+                real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path,file_format='mmCif')
                 parser = MMCIFParser()
                 input_format = 'cif'
 
@@ -47,6 +49,7 @@ class StructureManager():
                 print ('#ERROR: unknown filetype', file=sys.stderr)
                 sys.exit(2)
         try:
+            warnings.simplefilter('ignore', BiopythonWarning)
             self.st = parser.get_structure('st', real_pdb_path)
 
         except OSError:
