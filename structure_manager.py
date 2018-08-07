@@ -240,3 +240,14 @@ class StructureManager():
                lig_list.append(r)
         return lig_list
         
+    def get_residues_with_H(self):
+        resh_list = []
+        for r in self.st.get_residues():
+            has_h=0
+            for a in r.get_atoms():
+                if a.element == 'H':
+                    has_h +=1
+            if has_h:
+                resh_list.append({'r':r, 'n_h':has_h})
+        return resh_list
+        
