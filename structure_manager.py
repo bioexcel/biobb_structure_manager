@@ -11,6 +11,9 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBList import PDBList
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB.parse_pdb_header import parse_pdb_header
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
 from Bio import BiopythonWarning
 
 import structure_manager.util as util
@@ -35,7 +38,7 @@ class StructureManager():
                 input_format = 'cif'
 
             except IOError:
-                print ("#ERROR: fetching PDB " + input_pdb_path, file=sys.stderr)
+                print ('ERROR: fetching structure at {}'.format(input_pdb_path), file=sys.stderr)
                 sys.exit(2)
         else:
             real_pdb_path = input_pdb_path
@@ -46,11 +49,15 @@ class StructureManager():
                 parser = MMCIFParser()
                 input_format = 'cif'
             else:
-                print ('#ERROR: unknown filetype', file=sys.stderr)
+                print ('ERROR: unknown filetype', file=sys.stderr)
                 sys.exit(2)
         try:
             warnings.simplefilter('ignore', BiopythonWarning)
             self.st = parser.get_structure('st', real_pdb_path)
+            if input_format =='pdb':
+                self.headers = parse_pdb_header(real_pdb_path)
+            else:
+                self.headers = MMCIF2Dict(real_pdb_path)
 
         except OSError:
             print ("#ERROR: parsing PDB", file=sys.stderr)
@@ -73,7 +80,6 @@ class StructureManager():
 
         for at in self.st[0].get_atoms():
             self.num_ats += 1
-
         #checking models type
         if len(self.st) > 1:
 
@@ -138,11 +144,11 @@ class StructureManager():
             print ("#ERROR: unable to save PDB data on " + output_path, file=sys.stderr)
 
 
-    def get_all_at2at_distances(self, at_ids = ['All'], d_cutoff=0.):
+    def get_all_at2at_distances(self, at_ids = ['all'], d_cutoff=0.):
         dist_mat = []
         at_list = []
         for at in self.st.get_atoms():
-            if at.id in at_ids or at_ids == 'All':
+            if at.id in at_ids or at_ids == 'all':
                 at_list.append(at)
         for i in range(0, len(at_list)-1):
             for j in range(i + 1, len(at_list)):
@@ -151,12 +157,12 @@ class StructureManager():
                     dist_mat.append ([at_list[i], at_list[j], d])
         return dist_mat
     
-    def get_all_r2r_distances(self, r_ids = ['All'], d_cutoff=0.):
+    def get_all_r2r_distances(self, r_ids = ['all'], d_cutoff=0.):
         # Uses distances between the first atom of each residue as r-r distance
         dist_mat = []
         r_list = []
         for r in self.st.get_residues():
-            if r.resname in r_ids or r_ids == 'All':
+            if r.resname in r_ids or r_ids == 'all':
                 r_list.append(r)
         for i in range(0, len(r_list)-1):
             ati = r_list[i].child_list[0]
