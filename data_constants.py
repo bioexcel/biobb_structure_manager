@@ -21,6 +21,9 @@ polar_both = ["OG", "OG1", "SG"]
 pos_ats = ["NZ", "NE", "NH1", "NH2"]
 neg_ats = ["OD1", "OD2", "OE1", "OE2"]
 
+amide_res = ['ASN','GLN']
+amide_atoms = ['OD1','ND2','OE1','NE2']
+
 # Relevant Distances
 SS_DIST = 2.5
 

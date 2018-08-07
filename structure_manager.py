@@ -179,10 +179,13 @@ class StructureManager():
     def select_model(self, nm):
         self.st = self.st[nm-1]
 
-    def get_chain_ids(self):
+    def get_chain_ids(self,models=False):
         chain_ids = []
         for ch in self.st.get_chains():
-            chain_ids.append(ch.id)
+            id = ch.id
+            if models:
+                id += "/{}".format(ch.get_parent().id + 1)
+            chain_ids.append(id)
         return chain_ids
 
     def select_chains(self, select_chains):
@@ -251,3 +254,12 @@ class StructureManager():
                 resh_list.append({'r':r, 'n_h':has_h})
         return resh_list
         
+    def invert_amide_residue(self, r):
+        res_type=r.get_resname()
+        if not res_type in ['ASN','GLN']:
+            print ('Error: {} is not an amide residue',format(res_type))
+        if res_type == 'ASN':
+            util.swap_atom_names(r['OD1'],r['ND2'])
+        else: 
+            util.swap_atom_names(r['OE1'],r['NE2'])
+            

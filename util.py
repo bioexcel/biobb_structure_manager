@@ -24,16 +24,7 @@ three_letter_residue_code = {
     'T':'THR', 'V':'VAL', 'W':'TRP', 'Y':'TYR'
 }
 
-# Residue manipulation =======================================================
-def removeHFromRes (r, verbose=False):
-    H_list = []
-    for at in r.get_atoms():
-        if at.element == 'H':
-            H_list.append(at.id)
-    for at_id in H_list:
-        if verbose:
-            print ("  Deleting atom " + at_id)
-        r.detach_child(at_id)
+# Residue ids
 
 def residueid(r, models=False):
     return '{:>3} {}'.format(r.get_resname(), residuenum(r,models))
@@ -47,6 +38,7 @@ def residuenum (r, models=False):
 def atomid(at, models=False):
     return '{}.{}'.format(residueid(at.get_parent(), models),at.id)
 
+# Id Checks
 def residueCheck(r):
     r = r.upper()
     rid = ''
@@ -59,6 +51,52 @@ def residueCheck(r):
         sys.exit(1)
 
     return rid
+def same_residue (at1, at2):
+    return at1.get_parent() == at2.get_parent()
+
+def same_model(r1, r2):
+    return r1.get_parent().get_parent() == r2.get_parent().get_parent()
+
+def same_chain(r1, r2):
+    return r1.get_parent() == r2.get_parent() and same_model(r1, r2)
+
+def seq_consecutive(r1, r2):
+    resnum1 = r1.id[1]
+    resnum2 = r2.id[1]
+    return same_chain(r1, r2) and abs(resnum1-resnum2) == 1
+
+def is_wat(r):
+    return r.id[0] == 'W'
+
+# Residue manipulation =======================================================
+def removeHFromRes (r, verbose=False):
+    H_list = []
+    for at in r.get_atoms():
+        if at.element == 'H':
+            H_list.append(at.id)
+    for at_id in H_list:
+        if verbose:
+            print ("  Deleting atom " + at_id)
+        r.detach_child(at_id)
+
+def swap_atom_names(at1,at2):
+    at1_id = at1.id
+    at1_full_id = at1.full_id
+    at1_element = at1.element
+    at1_name = at1.name
+    at1_fullname = at1.fullname
+
+    at1.id = at2.id
+    at1.full_id = at2.full_id
+    at1.element = at2.element
+    at1.name = at2.name
+    at1.fullname = at2.fullname
+
+    at2.id = at1_id
+    at2.full_id = at1_full_id
+    at2.element = at1_element
+    at2.name = at1_name
+    at2.fullname = at1_fullname
 
 # Atom building ===============================================================
 def buildCoordsOther(r, res_lib, new_res, at_id):
@@ -114,7 +152,7 @@ def buildCoords(avec, bvec, cvec, geom):
 
     return avec + v3 - v1
 
-# Structure utils =============================================================
+# Metrics =============================================================
 def calcRMSdAll (st1, st2):
     ats1 = []
     ats2 = []
@@ -145,19 +183,4 @@ def get_all_rr_distances(r1, r2, with_h=False):
             if at1.serial_number < at2.serial_number:
                 dist_mat.append ([at1, at2, at1-at2])
     return dist_mat
-
-def same_residue (at1, at2):
-    return at1.get_parent() == at2.get_parent()
-
-def same_model(r1, r2):
-    return r1.get_parent().get_parent() == r2.get_parent().get_parent()
-
-def same_chain(r1, r2):
-    return r1.get_parent() == r2.get_parent() and same_model(r1, r2)
-
-def seq_consecutive(r1, r2):
-    resnum1 = r1.id[1]
-    resnum2 = r2.id[1]
-    return same_chain(r1, r2) and abs(resnum1-resnum2) == 1
-
 
