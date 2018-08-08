@@ -1,8 +1,6 @@
 """
     StructureManager: module to handle structure data.
 """
-
-
 import re
 import sys
 import warnings
@@ -38,7 +36,8 @@ class StructureManager():
                 input_format = 'cif'
 
             except IOError:
-                print ('ERROR: fetching structure at {}'.format(input_pdb_path), file=sys.stderr)
+                sys.stderr.write('ERROR: fetching structure at {}'.format(input_pdb_path))
+#                print ('ERROR: fetching structure at {}'.format(input_pdb_path), file=sys.stderr)
                 sys.exit(2)
         else:
             real_pdb_path = input_pdb_path
@@ -49,7 +48,8 @@ class StructureManager():
                 parser = MMCIFParser()
                 input_format = 'cif'
             else:
-                print ('ERROR: unknown filetype', file=sys.stderr)
+#                print ('ERROR: unknown filetype', file=sys.stderr)
+                sys.stderr.write('ERROR: unknown filetype')
                 sys.exit(2)
         try:
             warnings.simplefilter('ignore', BiopythonWarning)
@@ -60,7 +60,8 @@ class StructureManager():
                 self.headers = MMCIF2Dict(real_pdb_path)
 
         except OSError:
-            print ("#ERROR: parsing PDB", file=sys.stderr)
+            #print ("#ERROR: parsing PDB", file=sys.stderr)
+            sys.stderr.write ("#ERROR: parsing PDB")
             sys.exit(2)
 
         #====== Internal residue renumbering =========================================
@@ -109,7 +110,8 @@ class StructureManager():
                 remove_models = False
 
             else:
-                print ("#ERROR: Unknown use_models option", file=sys.stderr)
+#                print ("#ERROR: Unknown use_models option", file=sys.stderr)
+                sys.stderr.write ("#ERROR: Unknown use_models option")
                 sys.exit(1)
 
             if remove_models:
@@ -141,7 +143,8 @@ class StructureManager():
             pdbio.save(output_pdb_path)
 
         except OSError:
-            print ("#ERROR: unable to save PDB data on " + output_path, file=sys.stderr)
+#            print ("#ERROR: unable to save PDB data on " + output_path, file=sys.stderr)
+            sys.stderr.write ("#ERROR: unable to save PDB data on " + output_path)
 
 
     def get_all_at2at_distances(self, at_ids = ['all'], d_cutoff=0.):
@@ -193,7 +196,8 @@ class StructureManager():
         ch_ok = select_chains.split(',')
         for ch in ch_ok:
             if not ch in chain_ids:
-                print ("Error: request chain not present", ch, file=sys.stderr)
+#                print ("Error: request chain not present", ch, file=sys.stderr)
+                sys.stderr.write ('Error: requested chain {} not present'.format(ch))
                 select_chains = ''
         for ch in chain_ids:
             if ch not in ch_ok:
@@ -257,7 +261,7 @@ class StructureManager():
     def invert_amide_residue(self, r):
         res_type=r.get_resname()
         if not res_type in ['ASN','GLN']:
-            print ('Error: {} is not an amide residue',format(res_type))
+            sys.stderr.write('Error: {} is not an amide residue',format(res_type))
         if res_type == 'ASN':
             util.swap_atom_names(r['OD1'],r['ND2'])
         else: 
