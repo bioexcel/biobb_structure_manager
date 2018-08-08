@@ -2,12 +2,13 @@
   Utility functions to manipulate structures
 """
 
+import sys
+import re
 import math
 import numpy as np
-from numpy import cos
-from numpy import pi
-from numpy import sin
+from numpy import sin, cos, pi, dot, clip, arccos
 from numpy.linalg import norm
+
 
 # TODO: replace by Bio.PDB equivalent
 one_letter_residue_code = {
@@ -67,6 +68,76 @@ def seq_consecutive(r1, r2):
 
 def is_wat(r):
     return r.id[0] == 'W'
+
+def is_hetatm(r):
+    return re.match('H_', r.id[0]) or re.match('W', r.id[0])
+
+def check_chiral_residue(r,chiral_data):
+    """
+    Checks proper chirality of side chain atoms as defined in 
+    chiral_data
+    """
+    ok = True
+    if r.get_resname() in chiral_data:
+        atids = chiral_data[r.get_resname()]
+        ok = check_chiral(r, 'CB', 'CA', atids[0], atids[1], -1.)
+    return ok
+
+def check_chiral_ca(r):
+    """
+    Checks proper (L) quirality of CB atom with respect to backbone
+    """
+    return r.get_resname() == 'GLY' or check_chiral(r, 'N', 'CA','C','CB')
+
+def check_chiral(r,at1,at2,at3,at4, sign=1.):
+    """
+    Checks proper chirality. 
+    at1-at3 define reference plane. 
+    Position of at4 with respect to the plane is checked. 
+    Sign (+1,-1) allows to check for a specific enantiomer.
+    """
+    # check all atoms are present
+    at_ok=True
+    chi_ok=True
+    for at in [at1,at2,at3,at4]:
+        at_ok = at_ok and at in r
+        if not at_ok:
+            print ('Warning: atom {} not found in {}'.format(at,residueid(r)))
+    if at_ok:
+        v1=r[at1].coord-r[at2].coord
+        v2=r[at3].coord-r[at2].coord
+        vp = np.cross(v1,v2)
+        v3=r[at4].coord-r[at2].coord
+        chi_ok = sign * (calc_v_angle(vp,v3) - 90.) < 0.
+    return chi_ok
+    
+            
+def calc_bond_angle(at1,at2, at3):
+    v1 = at1.coord - at2.coord
+    v2 = at3.coord - at2.coord
+    return calc_v_angle(v1,v2)
+
+def calc_bond_dihedral(at1,at2,at3,at4):
+    ab = at1.coord-at2.coord
+    cb = at3.coord-at2.coord
+    db = at4.coord-at3.coord
+    u = np.cross(ab,cb)
+    v = np.cross(db,cb)
+    w = np.cross(u,v)
+    angle_uv = calc_v_angle(u,v)
+    angle_cbw = calc_v_angle(cb,w)
+    try:
+        if angle_cbw > 0.001:
+            angle_uv = -angle_uv
+    except ZeroDivisionError:
+        pass
+    return angle_uv
+
+def calc_v_angle(v1,v2,deg=True): #Provisional move to numpy?
+    angle = arccos(clip(dot(v1,v2)/norm(v1)/norm(v2),-1.,1.))
+    if deg:
+        angle *= 180./pi
+    return angle
 
 # Residue manipulation =======================================================
 def removeHFromRes (r, verbose=False):

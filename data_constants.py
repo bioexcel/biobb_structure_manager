@@ -21,8 +21,11 @@ polar_both = ["OG", "OG1", "SG"]
 pos_ats = ["NZ", "NE", "NH1", "NH2"]
 neg_ats = ["OD1", "OD2", "OE1", "OE2"]
 
-amide_res = ['ASN','GLN']
+amide_res = {'ASN':['OD1','ND2'],'GLN':['OE1','NE2']}
 amide_atoms = ['OD1','ND2','OE1','NE2']
+
+chiral_res = {'THR':['OG1','CG2'], 'ILE':['CG1','CG2']}
+
 
 # Relevant Distances
 SS_DIST = 2.5

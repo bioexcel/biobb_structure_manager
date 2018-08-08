@@ -36,7 +36,7 @@ class StructureManager():
                 input_format = 'cif'
 
             except IOError:
-                sys.stderr.write('ERROR: fetching structure at {}'.format(input_pdb_path))
+                sys.stderr.write("ERROR: fetching structure at {}\n".format(input_pdb_path))
 #                print ('ERROR: fetching structure at {}'.format(input_pdb_path), file=sys.stderr)
                 sys.exit(2)
         else:
@@ -49,7 +49,7 @@ class StructureManager():
                 input_format = 'cif'
             else:
 #                print ('ERROR: unknown filetype', file=sys.stderr)
-                sys.stderr.write('ERROR: unknown filetype')
+                sys.stderr.write("ERROR: unknown filetype\n")
                 sys.exit(2)
         try:
             warnings.simplefilter('ignore', BiopythonWarning)
@@ -61,7 +61,7 @@ class StructureManager():
 
         except OSError:
             #print ("#ERROR: parsing PDB", file=sys.stderr)
-            sys.stderr.write ("#ERROR: parsing PDB")
+            sys.stderr.write ("#ERROR: parsing PDB\n")
             sys.exit(2)
 
         #====== Internal residue renumbering =========================================
@@ -261,9 +261,18 @@ class StructureManager():
     def invert_amide_residue(self, r):
         res_type=r.get_resname()
         if not res_type in ['ASN','GLN']:
-            sys.stderr.write('Error: {} is not an amide residue',format(res_type))
+            sys.stderr.write('Error: {} is not an amide residue'.format(res_type))
         if res_type == 'ASN':
             util.swap_atom_names(r['OD1'],r['ND2'])
         else: 
             util.swap_atom_names(r['OE1'],r['NE2'])
             
+    def invert_chiral_side(self,r, chiral_data):
+        res_type=r.get_resname()
+        util.swap_atom_names(r[chiral_data[res_type][0]],r[chiral_data[res_type][1]])
+        
+    def invert_chiral_bck(self,r):
+        #TODO
+        res_type=r.get_resname()
+        print ("Not implemented")
+        
