@@ -32,7 +32,7 @@ three_letter_residue_code = {
 # Residue ids
 
 def residue_id(r, models=False):
-    return '{:>3} {}'.format(r.get_resname(), residuenum(r,models))
+    return '{:>3} {}'.format(r.get_resname(), residue_num(r,models))
 
 def residue_num (r, models=False):
     rn = str(r.get_parent().id) + str(r.id[1])
@@ -41,7 +41,7 @@ def residue_num (r, models=False):
     return rn
 
 def atom_id(at, models=False):
-    return '{}.{}'.format(residueid(at.get_parent(), models),at.id)
+    return '{}.{}'.format(residue_id(at.get_parent(), models),at.id)
 
 # Id Checks
 def residue_check(r):
@@ -107,7 +107,7 @@ def check_chiral(r,at1,at2,at3,at4, sign=1.):
     for at in [at1,at2,at3,at4]:
         at_ok = at_ok and at in r
         if not at_ok:
-            print ('Warning: atom {} not found in {}'.format(at,residueid(r)))
+            print ('Warning: atom {} not found in {}'.format(at,residue_id(r)))
     if at_ok:
         v1=r[at1].coord-r[at2].coord
         v2=r[at3].coord-r[at2].coord
@@ -127,9 +127,9 @@ def get_altloc_residues(st):
             res_list[rid].append(at)
     return res_list
 
-def get_metal_atoms(self, metal_ats):
+def get_metal_atoms(st, metal_ats):
     met_list = []
-    for at in self.st.get_atoms():
+    for at in st.get_atoms():
         if not re.match('H_', at.get_parent().id[0]):
             continue
         if at.id in metal_ats:
@@ -138,7 +138,7 @@ def get_metal_atoms(self, metal_ats):
 
 def get_ligands(st, incl_water=False):
     lig_list = []
-    for r in self.st.get_residues():
+    for r in st.get_residues():
         if re.match('H_', r.id[0]) or (incl_water and re.match('W', r.id[0])):
             lig_list.append(r)
     return lig_list
@@ -191,7 +191,11 @@ def invert_side_atoms(r, res_data):
     res_type=r.get_resname()
     if not res_type in res_data:
         sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
-    util.swap_atom_names(r[res_data[res_type][0]],r[res_data[res_type][1]])
+    swap_atom_names(r[res_data[res_type][0]],r[res_data[res_type][1]])
+
+def invert_chiral_ca(r):
+    #TODO 
+    return None
 
 # Atom building ===============================================================
 def buildCoordsOther(r, res_lib, new_res, at_id):
@@ -286,7 +290,7 @@ def get_all_at2at_distances(st, at_ids = ['all'], d_cutoff=0.):
     return dist_mat
 
     
-def get_all_r2r_distances(r_ids = ['all'], d_cutoff=0.):
+def get_all_r2r_distances(st, r_ids = ['all'], d_cutoff=0.):
     # Uses distances between the first atom of each residue as r-r distance
     dist_mat = []
     r_list = []
@@ -324,7 +328,7 @@ def calc_RMSd_all_ats (st1, st2):
     for at in st2.get_atoms():
         ats2.append(at)
         
-    return calc_RMSd.ats(ats1,ats2)    
+    return calc_RMSd_ats(ats1,ats2)    
 
 def get_all_rr_distances(r1, r2, with_h=False):
     dist_mat = []
@@ -339,8 +343,8 @@ def get_all_rr_distances(r1, r2, with_h=False):
     return dist_mat
 
 def guess_models_type(st, threshold):
-    if len(self.st)> 1:
-        if util.calc_RMSd_all_ats(self.st[0], self.st[1]) < threshold:
+    if len(st)> 1:
+        if calc_RMSd_all_ats(st[0], st[1]) < threshold:
             return NMR
         else:
             return TRAJ
