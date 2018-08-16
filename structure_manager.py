@@ -14,9 +14,8 @@ from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
 from Bio import BiopythonWarning
 
-import structure_manager.util as util
+import structure_manager.model_utils as mu
 
-MODELS_MAXRMS = 5.0    # Threshold value to detect NMR models (angs)
 
 class StructureManager():
 
@@ -25,6 +24,8 @@ class StructureManager():
         self.model_type = ''
         self.num_ats = 0
         self.nmodels = 0    
+        self.chain_ids=[]
+        
 # TODO support biounits
         if "pdb:"in input_pdb_path:
             pdbl = PDBList(pdb='tmpPDB')
@@ -33,7 +34,7 @@ class StructureManager():
                 input_pdb_path = input_pdb_path[4:].upper()
                 real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path,file_format='mmCif')
                 parser = MMCIFParser()
-                input_format = 'cif'
+                self.input_format = 'cif'
 
             except IOError:
                 sys.stderr.write("ERROR: fetching structure at {}\n".format(input_pdb_path))
@@ -65,16 +66,21 @@ class StructureManager():
             sys.exit(2)
         
         self.residue_renumbering()
+        
         #Atom renumbering for mmCIF,
-        if input_format == 'cif':
+        if self.input_format == 'cif':
             self.atom_renumbering()
 
-        self.num_ats = len(self.st[0].child_list)
-        
         #checking models type
         self.nmodels = len(self.st)
-        self.models_type=util.guess_models_type(self.st, MODELS_MAXRMS)
-
+        if self.nmodels > 1:
+            self.models_type=mu.guess_models_type(self.st)
+        else:
+            self.models_type=0
+        
+        self.set_chain_ids()
+        self.set_num_ats()
+        
     def residue_renumbering(self):
         i = 1
         for r in self.st.get_residues():
@@ -90,28 +96,67 @@ class StructureManager():
             i += 1
         
     def set_num_ats(self):
-        self.num_ats = len(self.st[0].child_list)
+        i = 0
+        hi = 0
+        wi = 0
+        for at in self.st.get_atoms(): # Check numbering in models
+            i += 1
+            if mu.is_hetatm(at.get_parent()):
+                hi += 1
+            if mu.is_wat(at.get_parent()):
+                wi += 1
+        self.num_ats = i
+        self.num_hetats = hi
+        self.num_wats = wi
     
+    def get_stats(self):
+        return {
+            'nmodels': self.nmodels,
+            'nchains' : len(self.chain_ids),
+            'chain_ids': self.chain_ids,
+            'num_ats': self.num_ats,
+            'num_hetats' : self.num_hetats,
+            'num_wats' : self.num_wats
+        }
+    def print_stats(self, prefix=''):
+        stats=self.get_stats()
+        print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
+        print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(stats['chain_ids'])))
+        print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
+        print ('{} Num. het atoms:  {}'.format(prefix, stats['num_hetats']))
+        print ('{} Num. water atoms:  {}'.format(prefix, stats['num_wats']))
+        
+
+        
     def get_structure(self):
         return self.st
 
     def save_structure(self, output_pdb_path):
-        pdbio = PDBIO()
-        pdbio.set_structure(self.st)
+        if output_pdb_path:
+            pdbio = PDBIO()
+            pdbio.set_structure(self.st)
+            try:
+                pdbio.save(output_pdb_path)
 
-        try:
-            pdbio.save(output_pdb_path)
-
-        except OSError:
-#            print ("#ERROR: unable to save PDB data on " + output_path, file=sys.stderr)
-            sys.stderr.write ("#ERROR: unable to save PDB data on " + output_path)
+            except OSError:
+                sys.stderr.write ("#ERROR: unable to save PDB data on " + output_path)
+        else:
+            sys.stderr.write ("Error: output_pdb_path not provided \n")
+            sys.exit(1)
 
     def select_model(self, nm):
-        self.st = self.st[nm-1]
+        ids=[]
+        for md in self.st.get_models():
+            ids.append(md.id)
+        for i in range(0, len(ids)):
+            if i != nm-1:
+                self.st.detach_child(ids[i])
         self.nmodels=1
-        self.residue_renumbering()
-        self.atom_renumbering()
-        self.set_num_ats()
+        self.models_type=0
+#        self.residue_renumbering()
+#        self.atom_renumbering()
+#        self.set_num_ats()
+        self.set_chain_ids()
 
     def set_chain_ids(self):
         self.chain_ids = []
@@ -120,24 +165,26 @@ class StructureManager():
             if self.nmodels > 1:
                 id += "/{}".format(ch.get_parent().id + 1)
             self.chain_ids.append(id)
-
+        self.chains_ids = sorted(self.chain_ids)
+        
     def select_chains(self, select_chains):
-        chain_ids = self.get_chain_ids()
+        if not self.chain_ids:
+            self.set_chain_ids()
         ch_ok = select_chains.split(',')
         for ch in ch_ok:
-            if not ch in chain_ids:
+            if not ch in self.chain_ids:
                 sys.stderr.write ('Error: requested chain {} not present'.format(ch))
                 select_chains = ''
-        for ch in chain_ids:
+        for ch in self.chain_ids:
             if ch not in ch_ok:
                 self.st[0].detach_child(ch)
-        self.chain_ids = self.set_chain_ids()
-        self.residue_renumbering()
-        self.atom_renumbering()
-        self.set_num_ats()
+        self.set_chain_ids()
+#        self.residue_renumbering()
+#        self.atom_renumbering()
+#        self.set_num_ats()
 
     def select_altloc_residues(self, r, select_altloc):
-        alt_loc_res = self.get_altloc_residues()
+        alt_loc_res = mu.get_altloc_residues(self.st)
         for at in alt_loc_res[r]:
             res = at.get_parent()
             if select_altloc == 'occupancy':
@@ -149,5 +196,12 @@ class StructureManager():
             res.detach_child(at.id)
             res.add (newat)
         res.disordered = 0
-        self.atom_renumbering()
-        self.set_num_ats()            
+#        self.atom_renumbering()
+#        self.set_num_ats()            
+        
+    def remove_residue(self,r):
+        mu.remove_residue(r)
+#        self.atom_renumbering()
+#        self.residue_renumbering()
+#        self.set_num_ats()            
+    
