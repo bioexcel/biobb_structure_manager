@@ -218,7 +218,7 @@ class StructureManager():
             at_id = r.get_resname().replace(' ','') + "." + at.id
         else:
             at_id = at.id
-        
-        return at_id in at_list[self.chain_ids[ch.id]]
+        # hack to include ribose atoms
+        return at_id in at_list[self.chain_ids[ch.id]] or at.id in at_list[self.chain_ids[ch.id]]
         
         

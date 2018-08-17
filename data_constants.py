@@ -16,8 +16,8 @@ apolar_elements = ["C","S"]
 
 polar_acceptor = {
     1:["O", "SD","OD1","OD2","OE1","OE2","O4'","O5'"],
-    2:["DG.N7", "DG.O6","DG.N3","DC.N3","DA.N7","DA.N3","DA.N1","DT.O4"],
-    3:["G.N7", "G.O6","G.N3","C.N3","A.N7","A.N3","A.N1","U.O4"]
+    2:["DG.N7", "DG.O6","DG.N3","DC.N3","DA.N7","DA.N3","DA.N1","DT.O4","O4'","O5'"],
+    3:["G.N7", "G.O6","G.N3","C.N3","A.N7","A.N3","A.N1","U.O4","O4'","O5'"]
 }
 
 polar_donor = {
