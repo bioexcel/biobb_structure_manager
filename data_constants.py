@@ -13,13 +13,22 @@ metal_ats = [
     "CD", "AG", "AU", "Cd2", "CA", "Ca"
 ]
 apolar_elements = ["C","S"]
-#polar_acceptor = ["O", "SD","SG","OD1","OD2","OE1","OE2","OG","OG1"]
-polar_acceptor = ["O", "SD","OD1","OD2","OE1","OE2"]
-#polar_donor = ["N","NE","NZ","NH1","NH2","ND1","NE2", "SG", "OG", "OG1"]
-polar_donor = ["N","NE","NZ","NH1","NH2","ND1","ND2","NE1","NE2"]
-polar_both = ["OG", "OG1", "SG"]
+
+polar_acceptor = {
+    1:["O", "SD","OD1","OD2","OE1","OE2","O4'","O5'"],
+    2:["DG.N7", "DG.O6","DG.N3","DC.N3","DA.N7","DA.N3","DA.N1","DT.O4"],
+    3:["G.N7", "G.O6","G.N3","C.N3","A.N7","A.N3","A.N1","U.O4"]
+}
+
+polar_donor = {
+    1:["N","NE","NZ","NH1","NH2","ND1","ND2","NE1","NE2"],
+    2:["DG.N2", "DC.N4","DA.N6","DT.N3"],
+    3:["G.N2", "C.N4","A.N6","U.N3"]
+}
+
+#ionic
 pos_ats = ["NZ", "NE", "NH1", "NH2"]
-neg_ats = ["OD1", "OD2", "OE1", "OE2"]
+neg_ats = ["OD1", "OD2", "OE1", "OE2","OP2"]
 
 amide_res = {'ASN':['OD1','ND2'],'GLN':['OE1','NE2']}
 amide_atoms = ['OD1','ND2','OE1','NE2']

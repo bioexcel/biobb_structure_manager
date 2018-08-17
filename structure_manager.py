@@ -96,15 +96,19 @@ class StructureManager():
             i += 1
         
     def set_num_ats(self):
+        nr = 0
         i = 0
         hi = 0
         wi = 0
-        for at in self.st.get_atoms(): # Check numbering in models
-            i += 1
-            if mu.is_hetatm(at.get_parent()):
-                hi += 1
-            if mu.is_wat(at.get_parent()):
-                wi += 1
+        for r in self.st.get_residues():
+            nr += 1
+            for at in r.get_atoms(): # Check numbering in models
+                i += 1
+                if mu.is_hetatm(at.get_parent()):
+                    hi += 1
+                if mu.is_wat(at.get_parent()):
+                    wi += 1
+        self.num_res = nr
         self.num_ats = i
         self.num_hetats = hi
         self.num_wats = wi
@@ -114,17 +118,19 @@ class StructureManager():
             'nmodels': self.nmodels,
             'nchains' : len(self.chain_ids),
             'chain_ids': self.chain_ids,
+            'num_res': self.num_res,
             'num_ats': self.num_ats,
             'num_hetats' : self.num_hetats,
-            'num_wats' : self.num_wats
+            'num_wat' : self.num_wats
         }
     def print_stats(self, prefix=''):
         stats=self.get_stats()
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
-        print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(stats['chain_ids'])))
+        print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(sorted(stats['chain_ids']))))
+        print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
         print ('{} Num. het atoms:  {}'.format(prefix, stats['num_hetats']))
-        print ('{} Num. water atoms:  {}'.format(prefix, stats['num_wats']))
+        print ('{} Num. water atoms:  {}'.format(prefix, stats['num_wat']))
         
 
         
@@ -151,6 +157,8 @@ class StructureManager():
         for i in range(0, len(ids)):
             if i != nm-1:
                 self.st.detach_child(ids[i])
+        if nm != 1:
+            self.st[nm-1].id = 0
         self.nmodels=1
         self.models_type=0
 #        self.residue_renumbering()
@@ -159,12 +167,9 @@ class StructureManager():
         self.set_chain_ids()
 
     def set_chain_ids(self):
-        self.chain_ids = []
-        for ch in self.st.get_chains():
-            id = ch.id
-            if self.nmodels > 1:
-                id += "/{}".format(ch.get_parent().id + 1)
-            self.chain_ids.append(id)
+        self.chain_ids = {}
+        for ch in self.st[0].get_chains():
+            self.chain_ids[ch.id] = mu.guess_chain_type(ch)
         self.chains_ids = sorted(self.chain_ids)
         
     def select_chains(self, select_chains):
@@ -175,9 +180,10 @@ class StructureManager():
             if not ch in self.chain_ids:
                 sys.stderr.write ('Error: requested chain {} not present'.format(ch))
                 select_chains = ''
-        for ch in self.chain_ids:
-            if ch not in ch_ok:
-                self.st[0].detach_child(ch)
+        for md in self.st:
+            for ch in self.chain_ids:
+                if ch not in ch_ok:
+                    self.st[md.id].detach_child(ch)
         self.set_chain_ids()
 #        self.residue_renumbering()
 #        self.atom_renumbering()
@@ -205,3 +211,14 @@ class StructureManager():
 #        self.residue_renumbering()
 #        self.set_num_ats()            
     
+    def is_at_in_list(self, at, at_list):
+        r = at.get_parent()
+        ch = r.get_parent()
+        if self.chain_ids[ch.id] != mu.PROTEIN:
+            at_id = r.get_resname().replace(' ','') + "." + at.id
+        else:
+            at_id = at.id
+        
+        return at_id in at_list[self.chain_ids[ch.id]]
+        
+        
