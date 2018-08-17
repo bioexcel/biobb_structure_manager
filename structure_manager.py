@@ -158,9 +158,6 @@ class StructureManager():
             self.st[nm-1].id = 0
         self.nmodels = 1
         self.models_type = 0
-#        self.residue_renumbering()
-#        self.atom_renumbering()
-#        self.set_num_ats()
         self.set_chain_ids()
         self.modified=True
 
@@ -184,9 +181,6 @@ class StructureManager():
                     self.st[md.id].detach_child(ch)
         self.set_chain_ids()
         self.modified=True
-#        self.residue_renumbering()
-#        self.atom_renumbering()
-#        self.set_num_ats()
 
     def select_altloc_residues(self, r, select_altloc):
         alt_loc_res = mu.get_altloc_residues(self.st)
@@ -202,22 +196,8 @@ class StructureManager():
             res.add (newat)
         res.disordered = 0
         self.modified=True
-#        self.atom_renumbering()
-#        self.set_num_ats()
 
     def remove_residue(self, r):
         mu.remove_residue(r)
         self.modified=True
-#        self.atom_renumbering()
-#        self.residue_renumbering()
-#        self.set_num_ats()
-
-    def is_at_in_list(self, at, at_list):
-        r = at.get_parent()
-        ch = r.get_parent()
-        if self.chain_ids[ch.id] != mu.PROTEIN:
-            at_id = r.get_resname().replace(' ', '') + "." + at.id
-        else:
-            at_id = at.id
-        # hack to include ribose atoms
-        return at_id in at_list[self.chain_ids[ch.id]] or at.id in at_list[self.chain_ids[ch.id]]
+        

@@ -130,6 +130,12 @@ def is_hetatm(r):
     """
     return re.match('H_', r.id[0]) or re.match('W', r.id[0])
 
+def is_at_in_list(at, at_list):
+    rname = at.get_parent().get_resname()
+    if not rname in at_list:
+        return at.id in at_list['*']
+    else:
+        return at.id in at_list[at.get_parent().get_resname()] or at.id in at_list['*']
 
 def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     """
