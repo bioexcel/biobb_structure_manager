@@ -109,6 +109,7 @@ class StructureManager():
         self.num_res = nr
         self.num_ats = na
         self.res_hetats = hi
+        self.res_ligands = hi-wi
         self.num_wat = wi
 
     def get_stats(self):
@@ -119,6 +120,7 @@ class StructureManager():
             'num_res': self.num_res,
             'num_ats': self.num_ats,
             'res_hetats': self.res_hetats,
+            'res_ligands': self.res_ligands,
             'num_wat': self.num_wat
         }
     def print_stats(self, prefix=''):
@@ -126,7 +128,8 @@ class StructureManager():
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(sorted(stats['chain_ids']))))
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
-        print ('{} Num. hetatm res:  {}'.format(prefix, stats['res_hetats']))
+        print ('{} Num. HETATM residues:  {}'.format(prefix, stats['res_hetats']))
+        print ('{} Num. ligand or modified residues:  {}'.format(prefix, stats['res_ligands']))
         print ('{} Num. water mol.:  {}'.format(prefix, stats['num_wat']))
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
     
@@ -186,7 +189,7 @@ class StructureManager():
         alt_loc_res = mu.get_altloc_residues(self.st)
         for at in alt_loc_res[r]:
             res = at.get_parent()
-            if select_altloc == 'occupancy':
+            if select_altloc.lower() == 'occupancy':
                 newat = at.selected_child
             else:
                 newat = at.child_dict[select_altloc]
