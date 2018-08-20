@@ -137,6 +137,9 @@ def is_at_in_list(at, at_list):
     else:
         return at.id in at_list[rname] or at.id in at_list['*']
 
+def has_ins_code(r):
+    return r.id[2] != ' '
+
 def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     """
     Guesses chain type (protein, dna, or rna) from residue composition

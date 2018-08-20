@@ -98,16 +98,20 @@ class StructureManager():
         na = 0
         hi = 0
         wi = 0
+        insi = 0
         for r in self.st.get_residues():
             nr += 1
             if mu.is_wat(r):
                 wi += 1
             if mu.is_hetatm(r):
                 hi += 1
+            if mu.has_ins_code(r):
+                insi += 1
             for at in r.get_atoms(): # Check numbering in models
                 na += 1
         self.num_res = nr
         self.num_ats = na
+        self.res_insc = insi
         self.res_hetats = hi
         self.res_ligands = hi-wi
         self.num_wat = wi
@@ -119,6 +123,7 @@ class StructureManager():
             'chain_ids': self.chain_ids,
             'num_res': self.num_res,
             'num_ats': self.num_ats,
+            'res_insc': self.res_insc,
             'res_hetats': self.res_hetats,
             'res_ligands': self.res_ligands,
             'num_wat': self.num_wat
@@ -128,6 +133,7 @@ class StructureManager():
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(sorted(stats['chain_ids']))))
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
+        print ('{} Num. residues with ins. codes:  {}'.format(prefix, stats['res_insc']))
         print ('{} Num. HETATM residues:  {}'.format(prefix, stats['res_hetats']))
         print ('{} Num. ligand or modified residues:  {}'.format(prefix, stats['res_ligands']))
         print ('{} Num. water mol.:  {}'.format(prefix, stats['num_wat']))
