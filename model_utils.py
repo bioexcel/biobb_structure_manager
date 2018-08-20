@@ -30,6 +30,7 @@ BUNIT = 2
 MODELS_MAXRMS = 15.0    # Threshold value to detect NMR models (angs)
 model_type_labels = {ENSM:'Ensembl', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
 
+
 # TODO: consider replace by Bio.PDB equivalent
 one_letter_residue_code = {
     'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G',
