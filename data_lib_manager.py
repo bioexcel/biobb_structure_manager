@@ -33,9 +33,6 @@ class DataLibManager():
     def get_metal_atoms(self):
         return self.atom_data['metal_atoms']
 
-    def get_apolar_elements(self):
-        return self.atom_data['apolar_elements']
-
     def get_atom_feature_list(self,feature):
         f_list = {}
         for rcode in self.residue_data:

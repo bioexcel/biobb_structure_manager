@@ -169,7 +169,10 @@ class StructureManager():
         self.models_type = 0
         self.set_chain_ids()
         self.modified=True
-
+    
+    def has_models(self):
+        return self.nmodels > 1
+    
     def set_chain_ids(self):
         self.chain_ids = {}
         for ch in self.st[0].get_chains():
