@@ -212,6 +212,18 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
         chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
     return chi_ok
 
+def check_all_at_in_r(r,at_list):
+    miss_at={'backbone':[],'side':[]}
+    rname = r.get_resname()
+    for t in ['backbone', 'side']:
+        for at_id in at_list[t]:
+            if not at_id in r:
+                miss_at[t].append(at_id)
+    if len(miss_at['backbone']+miss_at['side'])>0:
+        return miss_at
+    else:
+        return {}
+
 def get_altloc_residues(st):
     """
     Gets list of residue  with atoms with alternative location labels

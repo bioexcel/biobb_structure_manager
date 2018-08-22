@@ -116,6 +116,25 @@ class StructureManager():
         self.res_ligands = hi-wi
         self.num_wat = wi
 
+    def check_missing_atoms(self, valid_codes, residue_data):
+        miss_at_list = []
+        for r in self.st.get_residues():
+            if r.get_resname() in valid_codes and not mu.is_hetatm(r):
+                r_id = mu.residue_id(r)
+                miss_at = mu.check_all_at_in_r(r, residue_data[r.get_resname().replace(' ','')])
+                if len(miss_at) > 0:
+                    miss_at_list.append([r,miss_at])
+        return miss_at_list
+            
+    def get_missing_side_chain_atoms(self, valid_codes, residue_data):
+        miss_side = []
+        for res in self.check_missing_atoms(valid_codes, residue_data):
+            [r,at_list]=res
+            if not len(at_list['backbone']):
+                miss_side.append([r,at_list['side']])
+        return miss_side
+        
+            
     def get_stats(self):
         return {
             'nmodels': self.nmodels,
@@ -213,3 +232,6 @@ class StructureManager():
         mu.remove_residue(r)
         self.modified=True
         
+    def fix_side_chain(self,r_at):
+        #TODO
+        self.modified=True

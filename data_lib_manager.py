@@ -22,13 +22,16 @@ class DataLibManager():
             
     def get_valid_codes (self, type):
         if type == 'na':
-            codes = self.residue_code['dna']+ self.residue_codes['rna']
+            codes = self.residue_codes['dna']+ self.residue_codes['rna']
         else:
-            codes = self.residue_code['type']
+            codes = self.residue_codes[type]
         return codes
     
-    def get_atom_list(self,aa):
-        return {'backbone': self.residue_data['*']['bck_atoms'], 'side': self.residue_data[aa]['side_atoms']}
+    def get_atom_lists(self):
+        ats_lists = {}
+        for aa in self.residue_codes['protein']:
+            ats_lists[aa] = {'backbone': self.residue_data['*']['bck_atoms'], 'side': self.residue_data[aa]['side_atoms']}
+        return ats_lists
     
     def get_metal_atoms(self):
         return self.atom_data['metal_atoms']
