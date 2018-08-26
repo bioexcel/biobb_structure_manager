@@ -232,11 +232,10 @@ def get_altloc_residues(st):
     res_list = {}
     for at in st.get_atoms():
         r = at.get_parent()
-        rid = residue_id(r)
         if at.get_altloc() != ' ':
-            if rid not in res_list:
-                res_list[rid] = []
-            res_list[rid].append(at)
+            if r not in res_list:
+                res_list[r] = []
+            res_list[r].append(at)
     return res_list
 
 def get_metal_atoms(st, metal_ats):

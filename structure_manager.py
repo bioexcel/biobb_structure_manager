@@ -213,14 +213,16 @@ class StructureManager():
         self.set_chain_ids()
         self.modified=True
 
-    def select_altloc_residues(self, r, select_altloc):
-        alt_loc_res = mu.get_altloc_residues(self.st)
-        for at in alt_loc_res[r]:
-            res = at.get_parent()
-            if select_altloc.lower() == 'occupancy':
+    def select_altloc_residue(self, res, to_fix):
+        for at in to_fix['ats']:
+            if to_fix['select'].lower() == 'occupancy':
                 newat = at.selected_child
             else:
-                newat = at.child_dict[select_altloc]
+                if to_fix['select'] in at.child_dict.keys():
+                    newat = at.child_dict[to_fix['select']]
+                else:
+                    print ('Error: unknown alternative {} in {}'.format(to_fix['select'],mu.atom_id(at)), file=sys.stderr)
+                    continue
             newat.disordered_flag = 0
             newat.altloc = ' '
             res.detach_child(at.id)
