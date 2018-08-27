@@ -19,20 +19,20 @@ class DataLibManager():
         except IOError:
             print ("ERROR: unable to open data library "+ file_path, file=sys.stderr)
             sys.exit(2)
-            
-    def get_valid_codes (self, type):
-        if type == 'na':
+
+    def get_valid_codes (self, mol_type):
+        if mol_type == 'na':
             codes = self.residue_codes['dna']+ self.residue_codes['rna']
         else:
-            codes = self.residue_codes[type]
+            codes = self.residue_codes[mol_type]
         return codes
-    
+
     def get_atom_lists(self):
         ats_lists = {}
         for aa in self.residue_codes['protein']:
             ats_lists[aa] = {'backbone': self.residue_data['*']['bck_atoms'], 'side': self.residue_data[aa]['side_atoms']}
         return ats_lists
-    
+
     def get_metal_atoms(self):
         return self.atom_data['metal_atoms']
 
@@ -44,13 +44,13 @@ class DataLibManager():
         if not '*' in f_list:
             f_list['*'] = []
         return f_list
-    
+
     def get_mutation_rules(self,aa_in,aa_out,rule_group):
         return self.residue_data[aa_in]['mutation_rules'][aa_out][rule_group]
-    
+
     def get_distance(self, distid):
         return self.distances[distid]
-    
+
     def get_amide_data(self):
         alist=[]
         rlist={}
@@ -59,7 +59,7 @@ class DataLibManager():
                 alist += self.residue_data[rcode]['amide_atoms']
                 rlist[rcode] = self.residue_data[rcode]['amide_atoms']
         return [rlist,alist]
-    
+
     def get_chiral_data(self):
         rlist={}
         for rcode in self.residue_data:

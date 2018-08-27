@@ -213,12 +213,12 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
     return chi_ok
 
 def check_all_at_in_r(r,at_list):
-    miss_at={'backbone':[],'side':[]}
-    rname = r.get_resname()
-    for t in ['backbone', 'side']:
-        for at_id in at_list[t]:
+    miss_at={}
+    for group in ['backbone', 'side']:
+        miss_at[group]=[]
+        for at_id in at_list[group]:
             if not at_id in r:
-                miss_at[t].append(at_id)
+                miss_at[group].append(at_id)
     if len(miss_at['backbone']+miss_at['side'])>0:
         return miss_at
     else:
@@ -439,10 +439,13 @@ def calc_bond_dihedral(at1, at2, at3, at4):
         pass
     return angle_uv
 
-def get_all_at2at_distances(st, at_ids=['all'], d_cutoff=0.):
+def get_all_at2at_distances(st, at_ids='all', d_cutoff=0.):
     """
     Gets a list of all at-at distances below a cutoff, at ids can be limited
     """
+    if not isinstance(at_ids,list):
+        at_ids = at_ids.split(',')
+
     dist_mat = []
     at_list = []
     d_cut2 = d_cutoff ** 2
@@ -457,8 +460,10 @@ def get_all_at2at_distances(st, at_ids=['all'], d_cutoff=0.):
     return dist_mat
 
 
-def get_all_r2r_distances(st, r_ids=['all'], d_cutoff=0.):
+def get_all_r2r_distances(st, r_ids='all', d_cutoff=0.):
     # Uses distances between the first atom of each residue as r-r distance
+    if not isinstance(at_ids,list):
+        at_ids = at_ids.split(',')
     dist_mat = []
     r_list = []
     d_cut2 = d_cutoff ** 2
@@ -476,7 +481,7 @@ def get_all_r2r_distances(st, r_ids=['all'], d_cutoff=0.):
 
 def calc_RMSd_ats (ats1, ats2):
     if len(ats1) != len(ats2):
-        print ("Warning: atom lists of different length when calculating RMSd", file=sys.stderr())
+        print ("Warning: atom lists of different length when calculating RMSd", file=sys.stderr)
     rmsd = 0
     i = 0
     while i < len(ats1) and i < len(ats2):

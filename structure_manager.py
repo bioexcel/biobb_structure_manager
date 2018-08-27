@@ -1,6 +1,9 @@
 """
     StructureManager: module to handle structure data.
 """
+import sys
+import warnings
+
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
@@ -8,10 +11,8 @@ from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBList import PDBList
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
-import re
+
 import structure_manager.model_utils as mu
-import sys
-import warnings
 
 
 class StructureManager():
@@ -107,8 +108,7 @@ class StructureManager():
                 hi += 1
             if mu.has_ins_code(r):
                 insi += 1
-            for at in r.get_atoms(): # Check numbering in models
-                na += 1
+            na += len(r.get_list()) # Check numbering in models
         self.num_res = nr
         self.num_ats = na
         self.res_insc = insi
@@ -120,7 +120,6 @@ class StructureManager():
         miss_at_list = []
         for r in self.st.get_residues():
             if r.get_resname() in valid_codes and not mu.is_hetatm(r):
-                r_id = mu.residue_id(r)
                 miss_at = mu.check_all_at_in_r(r, residue_data[r.get_resname().replace(' ','')])
                 if len(miss_at) > 0:
                     miss_at_list.append([r,miss_at])
@@ -179,9 +178,9 @@ class StructureManager():
         ids = []
         for md in self.st.get_models():
             ids.append(md.id)
-        for i in range(0, len(ids)):
+        for i,v in enumerate(ids):
             if i != nm-1:
-                self.st.detach_child(ids[i])
+                self.st.detach_child(v)
         if nm != 1:
             self.st[nm-1].id = 0
         self.nmodels = 1
