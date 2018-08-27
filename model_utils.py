@@ -450,7 +450,7 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0.):
     at_list = []
     d_cut2 = d_cutoff ** 2
     for at in st.get_atoms():
-        if at.id in at_ids or at_ids == 'all':
+        if at.id in at_ids or at_ids == ['all']:
             at_list.append(at)
     for i in range(0, len(at_list)-1):
         for j in range(i + 1, len(at_list)):
@@ -462,13 +462,13 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0.):
 
 def get_all_r2r_distances(st, r_ids='all', d_cutoff=0.):
     # Uses distances between the first atom of each residue as r-r distance
-    if not isinstance(at_ids,list):
-        at_ids = at_ids.split(',')
+    if not isinstance(r_ids,list):
+        r_ids = r_ids.split(',')
     dist_mat = []
     r_list = []
     d_cut2 = d_cutoff ** 2
     for r in st.get_residues():
-        if r.resname in r_ids or r_ids == 'all':
+        if r.resname in r_ids or r_ids == ['all']:
             r_list.append(r)
     for i in range(0, len(r_list)-1):
         ati = r_list[i].child_list[0]
