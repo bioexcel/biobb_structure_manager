@@ -125,7 +125,7 @@ class StructureManager():
                 if len(miss_at) > 0:
                     miss_at_list.append([r,miss_at])
         return miss_at_list
-            
+
     def get_missing_side_chain_atoms(self, valid_codes, residue_data):
         miss_side = []
         for res in self.check_missing_atoms(valid_codes, residue_data):
@@ -133,8 +133,8 @@ class StructureManager():
             if not len(at_list['backbone']):
                 miss_side.append([r,at_list['side']])
         return miss_side
-        
-            
+
+
     def get_stats(self):
         return {
             'nmodels': self.nmodels,
@@ -157,7 +157,7 @@ class StructureManager():
         print ('{} Num. ligand or modified residues:  {}'.format(prefix, stats['res_ligands']))
         print ('{} Num. water mol.:  {}'.format(prefix, stats['num_wat']))
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
-    
+
 
     def get_structure(self):
         return self.st
@@ -188,10 +188,10 @@ class StructureManager():
         self.models_type = 0
         self.set_chain_ids()
         self.modified=True
-    
+
     def has_models(self):
         return self.nmodels > 1
-    
+
     def set_chain_ids(self):
         self.chain_ids = {}
         for ch in self.st[0].get_chains():
@@ -221,7 +221,7 @@ class StructureManager():
                 if to_fix['select'] in at.child_dict.keys():
                     newat = at.child_dict[to_fix['select']]
                 else:
-                    print ('Error: unknown alternative {} in {}'.format(to_fix['select'],mu.atom_id(at)), file=sys.stderr)
+                    print ('Warning: unknown alternative {} in {}'.format(to_fix['select'],mu.atom_id(at)), file=sys.stderr)
                     continue
             newat.disordered_flag = 0
             newat.altloc = ' '
@@ -233,7 +233,7 @@ class StructureManager():
     def remove_residue(self, r):
         mu.remove_residue(r)
         self.modified=True
-        
+
     def fix_side_chain(self,r_at):
         #TODO
         self.modified=True

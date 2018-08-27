@@ -322,6 +322,7 @@ def invert_side_atoms(r, res_data): #TODO check merging with swat_atom_names
     """
      Swaps atoms according to res_data. Useful for fixing amides and chirality issues
     """
+    #TODO reconstruc CD1 atom in Ile
     res_type = r.get_resname()
     if not res_type in res_data:
         sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
