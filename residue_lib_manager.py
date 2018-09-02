@@ -8,7 +8,6 @@ import sys
 class ResidueLib():
 
     def __init__(self, library_path):
-
         try:
             fh = open(library_path, "r")
 

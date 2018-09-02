@@ -67,3 +67,9 @@ class DataLibManager():
                 rlist[rcode]=self.residue_data[rcode]['chiral_atoms']
         return rlist
 
+    def get_mutation_map(self):
+        map={}
+        for rcode in self.residue_data:
+            if 'mutation_rules' in self.residue_data[rcode]:
+                map[rcode]=self.residue_data[rcode]['mutation_rules']
+        return(map)
