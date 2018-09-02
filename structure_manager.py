@@ -10,6 +10,7 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBList import PDBList
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB.Atom import Atom
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 
 import structure_manager.model_utils as mu
@@ -233,6 +234,24 @@ class StructureManager():
         mu.remove_residue(r)
         self.modified=True
 
-    def fix_side_chain(self,r_at):
-        #TODO
+    def fix_side_chain(self,r_at, res_library):
+        for at_id in r_at[1]:
+            print ("  Adding new atom " + at_id)
+            if at_id == 'CB':
+                coords = mu.buildCoordsCB(r_at[0])
+            else:
+                coords = mu.buildCoordsOther(r_at[0], res_library, r_at[0].get_resname(), at_id)
+
+            r_at[0].add(Atom(
+                at_id,
+                coords,
+                99.0,
+                1.0,
+                ' ',
+                ' ' + at_id + ' ',
+                0,
+                at_id[0:1]
+                ))
+            
+
         self.modified=True
