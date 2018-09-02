@@ -111,17 +111,12 @@ class Mutation():
             for rule in mut_map[r.get_resname()][self.new_id][MOV]:
                 [old_at, new_at] = rule.split("-")
                 print ("  Renaming " + old_at + " to " + new_at)
-                for at in r.get_atoms():
-                    if at.id == old_at:
-                        r.detach_child(at.id)
-                        at.id = new_at
-                        at.element = new_at[0:1]
-                        at.fullname = ' ' + new_at
-                        r.add(at)
+                mu.rename_atom(r, old_at, new_at)
+
 # Deleting atoms
             for at_id in mut_map[r.get_resname()][self.new_id][DEL]:
                 print ("  Deleting " + at_id)
-                r.detach_child(at_id)
+                mu.delete_atom(r, at_id)
 # Deleting H
             if remove_H == 'mut':
                 mu.remove_H_from_r(r, verbose= True)
@@ -129,23 +124,7 @@ class Mutation():
 # Adding atoms (new_id required as r.resname is still the original)
             for at_id in mut_map[r.get_resname()][self.new_id][ADD]:
                 print ("  Adding new atom " + at_id)
-                if at_id == 'CB':
-                    coords = mu.buildCoordsCB(r)
-                else:
-                    coords = mu.buildCoordsOther(r, res_lib, self.new_id, at_id)
-
-                at = Atom(
-                    at_id,
-                    coords,
-                    99.0,
-                    1.0,
-                    ' ',
-                    ' ' + at_id + ' ',
-                    0,
-                    at_id[0:1]
-                    )
-
-                r.add(at)
+                mu.build_atom(r, at_id, res_lib, self.new_id)
 
 #Renaming residue
             r.resname = self.new_id

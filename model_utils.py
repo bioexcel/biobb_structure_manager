@@ -11,6 +11,7 @@ from numpy import dot
 from numpy import pi
 from numpy import sin
 from numpy.linalg import norm
+from Bio.PDB.Atom import Atom
 import re
 import sys
 
@@ -296,7 +297,7 @@ def remove_residue(r):
     """
     r.get_parent().detach_child(r.id)
 
-def swap_atom_names(at1, at2):
+def swap_atoms(at1, at2):
     """
     Swaps names for two given atoms. Useful to fix labelling issues
     """
@@ -322,11 +323,11 @@ def invert_side_atoms(r, res_data): #TODO check merging with swat_atom_names
     """
      Swaps atoms according to res_data. Useful for fixing amides and chirality issues
     """
-    #TODO reconstruc CD1 atom in Ile
+    #TODO reconstruct CD1 atom in Ile
     res_type = r.get_resname()
     if not res_type in res_data:
         sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
-    swap_atom_names(r[res_data[res_type][0]], r[res_data[res_type][1]])
+    swap_atoms(r[res_data[res_type][0]], r[res_data[res_type][1]])
 
 def invert_chiral_ca(r):
     """
@@ -334,6 +335,36 @@ def invert_chiral_ca(r):
     """
     #TODO
     return None
+
+def rename_atom(r, old_at, new_at):
+    at = r[old_at]
+    r.detach_child(at.id)
+    at.id = new_at
+    at_full_id = new_at
+    at.element = new_at[0:1]
+    at.fullname = ' ' + new_at
+    r.add(at)
+
+def delete_atom(r,at_id):                
+    r.detach_child(at_id)
+    
+def build_atom(r, at_id, res_lib, new_res_id):
+    if at_id == 'CB':
+        coords = buildCoordsCB(r)
+    else:
+        coords = buildCoordsOther(r, res_lib, new_res_id, at_id)
+
+    at = Atom(
+        at_id,
+        coords,
+        99.0,
+        1.0,
+        ' ',
+        ' ' + at_id + ' ',
+        0,
+        at_id[0:1]
+        )
+    r.add(at)
 
 # Atom building ===============================================================
 def buildCoordsOther(r, res_lib, new_res, at_id):
