@@ -277,6 +277,44 @@ def get_residues_with_H(st):
             resh_list.append({'r':r, 'n_h':has_h})
     return resh_list
 
+def check_clashes(r1, r2, CLASH_DIST, atom_lists):
+
+    clash_list={}
+    min_dist={}
+    for cls in atom_lists:
+        clash_list[cls]=[]
+        min_dist[cls]=999.
+    
+    if r1 != r2 and not seq_consecutive(r1, r2) and same_model(r1, r2):
+        for at_pair in get_all_rr_distances(r1, r2):
+            [at1, at2, dist] = at_pair
+            if 'severe' in atom_lists and dist < CLASH_DIST['severe']:
+                if dist < min_dist:
+                    clash_list['severe'] = at_pair
+                    min_dist['severe'] = dist
+            else:
+                for cls in atom_lists:
+                    if cls == 'apolar':
+                        #Only one of the atoms should be apolar
+                        if not is_at_in_list(at1, atom_lists[cls]) and not is_at_in_list(at2, atom_lists[cls]):
+                            continue
+                        #Remove n->n+2 backbone clashes. TODO Improve
+                        if abs(at1.get_parent().index - at2.get_parent().index) <= 2:
+                            continue
+                        #Remove Ca2+ looking like backbone CA's
+                        if is_hetatm(at1.get_parent()) and at1.id == 'CA' or \
+                            is_hetatm(at2.get_parent()) and at2.id == 'CA':
+                                continue
+                    else:
+                        # Both atoms should be of the same kind
+                        if not is_at_in_list(at1, atom_lists[cls]) or not is_at_in_list(at2, atom_lists[cls]):
+                            continue
+                    if dist < CLASH_DIST[cls]:
+                        if dist < min_dist[cls]:
+                            clash_list[cls] = at_pair
+                            min_dist[cls] = dist
+    return clash_list
+
 # Residue manipulation =======================================================
 def remove_H_from_r (r, verbose=False):
     """
