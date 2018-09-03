@@ -284,7 +284,7 @@ def check_clashes(r1, r2, CLASH_DIST, atom_lists):
     for cls in atom_lists:
         clash_list[cls]=[]
         min_dist[cls]=999.
-    
+
     if r1 != r2 and not seq_consecutive(r1, r2) and same_model(r1, r2):
         for at_pair in get_all_rr_distances(r1, r2):
             [at1, at2, dist] = at_pair
@@ -384,9 +384,9 @@ def rename_atom(r, old_at, new_at):
     at.fullname = ' ' + new_at
     r.add(at)
 
-def delete_atom(r,at_id):                
+def delete_atom(r,at_id):
     r.detach_child(at_id)
-    
+
 def build_atom(r, at_id, res_lib, new_res_id):
     if at_id == 'CB':
         coords = buildCoordsCB(r)
