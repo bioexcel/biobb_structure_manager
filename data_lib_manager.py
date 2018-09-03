@@ -48,7 +48,7 @@ class DataLibManager():
     def get_mutation_rules(self,aa_in,aa_out,rule_group):
         return self.residue_data[aa_in]['mutation_rules'][aa_out][rule_group]
 
-    def get_distance(self, distid):
+    def get_distances(self, distid):
         return self.distances[distid]
 
     def get_amide_data(self):

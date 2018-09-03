@@ -336,6 +336,7 @@ def invert_chiral_ca(r):
     #TODO
     return None
 
+# Atom management ==============================================================
 def rename_atom(r, old_at, new_at):
     at = r[old_at]
     r.detach_child(at.id)
@@ -366,7 +367,6 @@ def build_atom(r, at_id, res_lib, new_res_id):
         )
     r.add(at)
 
-# Atom building ===============================================================
 def buildCoordsOther(r, res_lib, new_res, at_id):
     """
      Calculates cartesian coordinates for a new atom from internal coordinates definition.
