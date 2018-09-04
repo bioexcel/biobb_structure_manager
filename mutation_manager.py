@@ -37,8 +37,10 @@ class MutationManager():
 
     # Perform the modifications according to rules
     def apply_mutations (self, st, mutation_map, residue_lib, remove_H='mut', debug=False):
+        mutated_res=[]
         for mut in self.mutation_list:
-            mut.apply(st, mutation_map, residue_lib, remove_H, debug)
+            mutated_res += mut.apply(st, mutation_map, residue_lib, remove_H, debug)
+        return mutated_res
 
     def __str__(self):
         return ','.join(self.id_list)
@@ -103,7 +105,7 @@ class Mutation():
             print (self.mutations)
             print ("Mutation Rules")
             print (mut_map[self.old_id][self.new_id])
-
+        mutated_res=[]
         for m in self.mutations:
             r = st[m['model']][m['chain']][m['residue']]
             print ("Replacing " + mu.residue_id(r) + " into " + self.new_id)
@@ -128,7 +130,11 @@ class Mutation():
 
 #Renaming residue
             r.resname = self.new_id
-        print ("")
+            mutated_res.append(r)
+        print("")
+        return mutated_res
+
+
 
     def __str__(self):
       return self.id

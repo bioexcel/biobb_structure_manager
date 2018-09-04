@@ -277,7 +277,21 @@ def get_residues_with_H(st):
             resh_list.append({'r':r, 'n_h':has_h})
     return resh_list
 
-def check_clashes(r1, r2, CLASH_DIST, atom_lists):
+def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists):
+    clash_list={'severe':{}}
+    for cls in atom_lists:
+        clash_list[cls]={}
+    for r_pair in rr_list:
+        [r1,r2,d] = r_pair
+        if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
+            c_list = check_rr_clashes(r1,r2, CLASH_DIST, atom_lists)
+            rkey = residue_id(r1)+'-'+residue_id(r2)
+            for cls in c_list:
+                if len(c_list[cls]):
+                    clash_list[cls][rkey] = c_list[cls]
+    return clash_list
+
+def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
 
     clash_list={}
     min_dist={}
@@ -310,6 +324,7 @@ def check_clashes(r1, r2, CLASH_DIST, atom_lists):
                         if not is_at_in_list(at1, atom_lists[cls]) or not is_at_in_list(at2, atom_lists[cls]):
                             continue
                     if dist < CLASH_DIST[cls]:
+
                         if dist < min_dist[cls]:
                             clash_list[cls] = at_pair
                             min_dist[cls] = dist

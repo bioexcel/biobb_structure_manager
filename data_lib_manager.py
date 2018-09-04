@@ -27,7 +27,7 @@ class DataLibManager():
             codes = self.residue_codes[mol_type]
         return codes
 
-    def get_atom_lists(self):
+    def get_all_atom_lists(self):
         ats_lists = {}
         for aa in self.residue_codes['protein']:
             ats_lists[aa] = {'backbone': self.residue_data['*']['bck_atoms'], 'side': self.residue_data[aa]['side_atoms']}
@@ -44,6 +44,13 @@ class DataLibManager():
         if not '*' in f_list:
             f_list['*'] = []
         return f_list
+
+    def get_atom_lists(self, contact_types):
+        atom_lists={}
+        for cls in contact_types:
+            if cls != 'severe':
+                atom_lists[cls]= self.get_atom_feature_list(cls + '_atoms')
+        return atom_lists
 
     def get_mutation_rules(self,aa_in,aa_out,rule_group):
         return self.residue_data[aa_in]['mutation_rules'][aa_out][rule_group]
