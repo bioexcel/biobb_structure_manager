@@ -25,6 +25,7 @@ class StructureManager():
         self.nmodels = 0
         self.chain_ids = []
         self.modified = False
+        self.all_residues = []
 
 # TODO support biounits
         if "pdb:"in input_pdb_path:
@@ -85,6 +86,7 @@ class StructureManager():
         i = 1
         for r in self.st.get_residues():
             r.index = i
+            self.all_residues.append(r)
             i += 1
 
     def atom_renumbering(self):
@@ -138,26 +140,62 @@ class StructureManager():
         miss_bck = []
         for res in self.check_missing_atoms(valid_codes, residue_data):
             [r,at_list]=res
-            miss_bck.append([r,at_list['backbone']])
-        return miss_bck    
-    
-    def check_backbone_connect(self):
-        self.backbone_links = mu.get_backbone_links(self._get_structure(), backbone_atoms, self.data_library.get_distances('COVLNK'))
-        residue_link = {}
+            if at_list['backbone']:
+                miss_bck.append([r,at_list['backbone']])
+        return miss_bck
+
+    def get_bck_breaks(self):
+        if not self.residue_link_to:
+            self.check_backbone_connect(backbone_atoms, self.data_library.get_distances('COVLNK'))
+        self.bck_breaks_list=[]
+        self.wrong_link_list=[]
+        self.not_link_seq_list=[]
+        self.modified_residue_list=[]
+        for i in range(0,len(self.all_residues)-1):
+            r1 = self.all_residues[i]
+            r2 = self.all_residues[i+1]
+            if mu.is_hetatm(r1) or mu.is_hetatm(r2):
+                if r1 in self.residue_link_to:
+                    if self.residue_link_to[r1] == r2:
+                        if mu.is_hetatm(r1):
+                            self.modified_residue_list.append(r1)
+                else:
+                    continue
+            #Skip NA #TODO include NA Backbone
+            if self.chain_ids[r1.get_parent().id] != mu.PROTEIN:
+                continue
+
+            if r1 not in self.residue_link_to:
+                self.bck_breaks_list.append([r1,r2])
+                if mu.seq_consecutive(r1,r2):
+                    d=0.
+                    if 'N' in r1 and 'C' in r2:
+                        d = r1['N']-r2['C']
+                    self.not_link_seq_list.append([r1,r2,d])
+
+
+            else:
+                if r2 != self.residue_link_to[r1]:
+                    self.wrong_link_list.append([r1,self.residue_link_to[r1],r2])
+#            print (i, mu.residue_id(self.all_residues[i]))
+
+    def check_backbone_connect(self, backbone_atoms, COVLNK):
+        backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
+        self.residue_link_to = {}
         for lnk in backbone_links:
             [at1, at2] = lnk
-            self.residue_link[at1.get_parent()]=at2.get_parent()
+            self.residue_link_to[at1.get_parent()]=at2.get_parent()
             # missing residues
-            # diff chain 
+            # diff chain
             # no n->n+1
             # missing n->n+1
-            
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
 
     def get_stats(self):
         return {
@@ -276,8 +314,8 @@ class StructureManager():
                 0,
                 at_id[0:1]
                 ))
-            
+
 
         self.modified=True
-    
-    
+
+

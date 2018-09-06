@@ -329,17 +329,17 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
 def get_backbone_links(st, backbone_atoms, COVLNK):
     cov_links = []
     for m in st:
-        bckats = [] 
+        bckats = []
         for at in st[m.id].get_atoms():
             if at.id in backbone_atoms:
                 bckats.append(at)
-    
+
         nbsearch = NeighborSearch(bckats)
 
         for at1, at2 in nbsearch.search_all(COVLNK):
             if not same_residue(at1,at2):
                 cov_links.append(sorted([at1,at2], key=lambda x: x.serial_number))
-            
+
     return cov_links
 
 # Residue manipulation =======================================================
