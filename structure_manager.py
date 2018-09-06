@@ -134,6 +134,30 @@ class StructureManager():
                 miss_side.append([r,at_list['side']])
         return miss_side
 
+    def get_missing_backbone_atoms(self, valid_codes, residue_data):
+        miss_bck = []
+        for res in self.check_missing_atoms(valid_codes, residue_data):
+            [r,at_list]=res
+            miss_bck.append([r,at_list['backbone']])
+        return miss_bck    
+    
+    def check_backbone_connect(self):
+        self.backbone_links = mu.get_backbone_links(self._get_structure(), backbone_atoms, self.data_library.get_distances('COVLNK'))
+        residue_link = {}
+        for lnk in backbone_links:
+            [at1, at2] = lnk
+            self.residue_link[at1.get_parent()]=at2.get_parent()
+            # missing residues
+            # diff chain 
+            # no n->n+1
+            # missing n->n+1
+            
+        
+        
+        
+            
+        
+    
 
     def get_stats(self):
         return {
@@ -255,3 +279,5 @@ class StructureManager():
             
 
         self.modified=True
+    
+    

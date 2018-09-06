@@ -4,14 +4,10 @@
 
 import math
 import numpy as np
-from numpy import arccos
-from numpy import clip
-from numpy import cos
-from numpy import dot
-from numpy import pi
-from numpy import sin
+from numpy import arccos, clip, cos, dot, pi, sin
 from numpy.linalg import norm
 from Bio.PDB.Atom import Atom
+from Bio.PDB.NeighborSearch import NeighborSearch
 import re
 import sys
 
@@ -329,6 +325,22 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
                             clash_list[cls] = at_pair
                             min_dist[cls] = dist
     return clash_list
+
+def get_backbone_links(st, backbone_atoms, COVLNK):
+    cov_links = []
+    for m in st:
+        bckats = [] 
+        for at in st[m.id].get_atoms():
+            if at.id in backbone_atoms:
+                bckats.append(at)
+    
+        nbsearch = NeighborSearch(bckats)
+
+        for at1, at2 in nbsearch.search_all(COVLNK):
+            if not same_residue(at1,at2):
+                cov_links.append(sorted([at1,at2], key=lambda x: x.serial_number))
+            
+    return cov_links
 
 # Residue manipulation =======================================================
 def remove_H_from_r (r, verbose=False):
