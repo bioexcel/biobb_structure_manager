@@ -105,7 +105,7 @@ def same_chain(r1, r2):
     """
     Checks whether residues belong to the same chain
     """
-    return r1.get_parent() == r2.get_parent() and same_model(r1, r2)
+    return (r1.get_parent() == r2.get_parent()) and same_model(r1, r2)
 
 def seq_consecutive(r1, r2):
     """

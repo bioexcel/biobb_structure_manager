@@ -1,9 +1,5 @@
-"""
-    StructureManager: module to handle structure data.
-"""
 import sys
 import warnings
-
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
@@ -84,6 +80,7 @@ class StructureManager():
 
     def residue_renumbering(self):
         i = 1
+        self.all_residues=[]
         for r in self.st.get_residues():
             r.index = i
             self.all_residues.append(r)
@@ -145,8 +142,6 @@ class StructureManager():
         return miss_bck
 
     def get_bck_breaks(self):
-        if not self.residue_link_to:
-            self.check_backbone_connect(backbone_atoms, self.data_library.get_distances('COVLNK'))
         self.bck_breaks_list=[]
         self.wrong_link_list=[]
         self.not_link_seq_list=[]
@@ -154,6 +149,8 @@ class StructureManager():
         for i in range(0,len(self.all_residues)-1):
             r1 = self.all_residues[i]
             r2 = self.all_residues[i+1]
+            if not mu.same_chain(r1,r2):
+                continue
             if mu.is_hetatm(r1) or mu.is_hetatm(r2):
                 if r1 in self.residue_link_to:
                     if self.residue_link_to[r1] == r2:
@@ -248,6 +245,8 @@ class StructureManager():
             self.st[nm-1].id = 0
         self.nmodels = 1
         self.models_type = 0
+        self.residue_renumbering()
+        self.atom_renumbering()
         self.set_chain_ids()
         self.modified=True
 
@@ -273,6 +272,8 @@ class StructureManager():
                 if ch not in ch_ok:
                     self.st[md.id].detach_child(ch)
         self.set_chain_ids()
+        self.atom_renumbering()
+        self.residue_renumbering()
         self.modified=True
 
     def select_altloc_residue(self, res, to_fix):
@@ -294,6 +295,8 @@ class StructureManager():
 
     def remove_residue(self, r):
         mu.remove_residue(r)
+        self.atom_renumbering()
+        self.residue_renumbering()
         self.modified=True
 
     def fix_side_chain(self,r_at, res_library):
@@ -317,5 +320,4 @@ class StructureManager():
 
 
         self.modified=True
-
 
