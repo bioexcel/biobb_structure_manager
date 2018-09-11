@@ -334,11 +334,14 @@ def get_backbone_links(st, backbone_atoms, COVLNK):
             if at.id in backbone_atoms:
                 bckats.append(at)
 
-        nbsearch = NeighborSearch(bckats)
+        if bckats:
+            nbsearch = NeighborSearch(bckats)
 
-        for at1, at2 in nbsearch.search_all(COVLNK):
-            if not same_residue(at1,at2):
-                cov_links.append(sorted([at1,at2], key=lambda x: x.serial_number))
+            for at1, at2 in nbsearch.search_all(COVLNK):
+                if not same_residue(at1,at2):
+                    cov_links.append(sorted([at1,at2], key=lambda x: x.serial_number))
+        else:
+            print ("Warning: No backbone atoms defined")
 
     return cov_links
 
@@ -535,7 +538,7 @@ def calc_bond_dihedral(at1, at2, at3, at4):
         pass
     return angle_uv
 
-def get_all_at2at_distances(st, at_ids='all', d_cutoff=0.):
+def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
     """
     Gets a list of all at-at distances below a cutoff, at ids can be limited
     """
@@ -550,9 +553,10 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0.):
             at_list.append(at)
     for i in range(0, len(at_list)-1):
         for j in range(i + 1, len(at_list)):
-            d = calc_at_sq_dist(at_list[i], at_list[j])
-            if d_cutoff > 0. and d < d_cut2:
-                dist_mat.append ([at_list[i], at_list[j], d])
+            if not check_models or same_model(at_list[i].get_parent(), at_list[j].get_parent()):
+                d = calc_at_sq_dist(at_list[i], at_list[j])
+                if d_cutoff > 0. and d < d_cut2:
+                    dist_mat.append ([at_list[i], at_list[j], d])
     return dist_mat
 
 
