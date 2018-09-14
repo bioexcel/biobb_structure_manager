@@ -62,7 +62,7 @@ def residue_num (r, models=False):
     """
     rn = str(r.get_parent().id) + str(r.id[1])
     if models:
-        rn += "/" + str(r.get_parent().get_parent().id)
+        rn += "/" + str(r.get_parent().get_parent().id+1)
     return rn
 
 def atom_id(at, models=False):
