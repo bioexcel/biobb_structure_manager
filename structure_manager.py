@@ -56,12 +56,12 @@ class StructureManager():
                 self.headers = parse_pdb_header(real_pdb_path)
             else:
                 self.headers = MMCIF2Dict(real_pdb_path)
-
+        
         except OSError:
     #print ("#ERROR: parsing PDB", file=sys.stderr)
             sys.stderr.write ("#ERROR: parsing PDB\n")
             sys.exit(2)
-
+        print(self.headers)
         self.residue_renumbering()
 
     #Atom renumbering for mmCIF,
@@ -224,8 +224,24 @@ class StructureManager():
             'res_ligands': self.res_ligands,
             'num_wat': self.num_wat
         }
+    def print_headers(self):
+        if self.input_format== 'cif':
+            print (' PDB id: {}'.format(self.headers['_entry.id']))
+            print (' Title: {}'.format(self.headers['_struct.title']))
+            print (' Experimental method: {}'.format(self.headers['_exptl.method']))
+            print (' Keywords: {}'.format(self.headers['_struct_keywords.pdbx_keywords']))
+            if '_refine_hist.d_res_high' in self.headers:
+                print (' Resolution: {} A'.format(self.headers['_refine_hist.d_res_high']))
+        else:
+            print ('Title: {}'.format(self.headers['name']))
+            print ('Experimental method: {}'.format(self.headers['structure_method']))
+            print ('Keywords: {}'.format(self.headers['keywords']))
+            if 'resolution' in self.headers():
+                print ('Resolution: {} A'.format(self.headers['resolution']))
+
     def print_stats(self, prefix=''):
         stats = self.get_stats()
+        
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(sorted(stats['chain_ids']))))
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
