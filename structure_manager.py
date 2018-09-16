@@ -61,7 +61,6 @@ class StructureManager():
     #print ("#ERROR: parsing PDB", file=sys.stderr)
             sys.stderr.write ("#ERROR: parsing PDB\n")
             sys.exit(2)
-        print(self.headers)
         self.residue_renumbering()
 
     #Atom renumbering for mmCIF,
@@ -235,8 +234,9 @@ class StructureManager():
         else:
             print ('Title: {}'.format(self.headers['name']))
             print ('Experimental method: {}'.format(self.headers['structure_method']))
-            print ('Keywords: {}'.format(self.headers['keywords']))
-            if 'resolution' in self.headers():
+            if 'keywords' in self.headers:
+                print ('Keywords: {}'.format(self.headers['keywords']))
+            if 'resolution' in self.headers:
                 print ('Resolution: {} A'.format(self.headers['resolution']))
 
     def print_stats(self, prefix=''):
