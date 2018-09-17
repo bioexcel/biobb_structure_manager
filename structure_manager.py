@@ -243,7 +243,13 @@ class StructureManager():
         stats = self.get_stats()
         
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
-        print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ','.join(sorted(stats['chain_ids']))))
+        chids=[]
+        for id in sorted(stats['chain_ids']):
+            if isinstance(stats['chain_ids'][id],list):
+                chids.append('{}: Unknown '.format(id))
+            else:
+                chids.append('{}: {}'.format(id, mu.chain_type_labels[stats['chain_ids'][id]]))
+        print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ', '.join(chids)))
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
         print ('{} Num. residues with ins. codes:  {}'.format(prefix, stats['res_insc']))
         print ('{} Num. HETATM residues:  {}'.format(prefix, stats['res_hetats']))
