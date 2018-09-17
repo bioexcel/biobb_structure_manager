@@ -60,7 +60,10 @@ def residue_num (r, models=False):
     """
     Shortcut for getting residue num including chain id, includes model number if any
     """
-    rn = str(r.get_parent().id) + str(r.id[1])
+    if has_ins_code(r):
+        rn = str(r.get_parent().id) + str(r.id[1]) + r.id[2]
+    else:
+        rn = str(r.get_parent().id) + str(r.id[1])
     if models:
         rn += "/" + str(r.get_parent().get_parent().id+1)
     return rn

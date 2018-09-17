@@ -114,6 +114,13 @@ class StructureManager():
         self.res_hetats = hi
         self.res_ligands = hi-wi
         self.num_wat = wi
+        
+    def get_ins_codes(self):
+        self.ins_codes_list=[]
+        for r in self.st.get_residues():
+            if mu.has_ins_code(r):
+                self.ins_codes_list.append(r)
+        
 
     def check_missing_atoms(self, valid_codes, residue_data):
         miss_at_list = []
@@ -253,7 +260,7 @@ class StructureManager():
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
         print ('{} Num. residues with ins. codes:  {}'.format(prefix, stats['res_insc']))
         print ('{} Num. HETATM residues:  {}'.format(prefix, stats['res_hetats']))
-        print ('{} Num. ligand or modified residues:  {}'.format(prefix, stats['res_ligands']))
+        print ('{} Num. ligands or modified residues:  {}'.format(prefix, stats['res_ligands']))
         print ('{} Num. water mol.:  {}'.format(prefix, stats['num_wat']))
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
 
