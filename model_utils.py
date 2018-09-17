@@ -143,6 +143,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     Guesses chain type (protein, dna, or rna) from residue composition
     Allow for non-std residues.
     """
+    #TODO improve guessing for hybrid chains 
     prot = 0.
     dna = 0.
     rna = 0.
@@ -162,11 +163,11 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     dna = dna / total
     rna = rna / total
     other = 1 - prot - dna - rna
-    if prot > thres:
+    if prot > thres or prot > dna+rna:
         return PROTEIN
-    elif dna > thres:
+    elif dna > thres or dna > prot+rna:
         return DNA
-    elif rna > thres:
+    elif rna > thres or rna > prot+dna:
         return RNA
     else:
         return [prot,dna,rna, other]
