@@ -161,6 +161,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     prot = prot / total
     dna = dna / total
     rna = rna / total
+    other = 1 - prot - dna - rna
     if prot > thres:
         return PROTEIN
     elif dna > thres:
@@ -168,7 +169,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     elif rna > thres:
         return RNA
     else:
-        return UNKNOWN
+        return [prot,dna,rna, other]
 
 def check_chiral_residue(r, chiral_data):
     """
