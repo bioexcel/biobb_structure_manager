@@ -56,7 +56,7 @@ class StructureManager():
                 self.headers = parse_pdb_header(real_pdb_path)
             else:
                 self.headers = MMCIF2Dict(real_pdb_path)
-        
+
         except OSError:
     #print ("#ERROR: parsing PDB", file=sys.stderr)
             sys.stderr.write ("#ERROR: parsing PDB\n")
@@ -114,13 +114,13 @@ class StructureManager():
         self.res_hetats = hi
         self.res_ligands = hi-wi
         self.num_wat = wi
-        
+
     def get_ins_codes(self):
         self.ins_codes_list=[]
         for r in self.st.get_residues():
             if mu.has_ins_code(r):
                 self.ins_codes_list.append(r)
-        
+
 
     def check_missing_atoms(self, valid_codes, residue_data):
         miss_at_list = []
@@ -210,8 +210,8 @@ class StructureManager():
                     self.cis_backbone_list.append([r1,r2,dih])
                 elif abs(dih) < TRANSTHRES:
                     self.lowtrans_backbone_list.append([r1,r2,dih])
-                    
-            
+
+
 
 
 
@@ -248,7 +248,7 @@ class StructureManager():
 
     def print_stats(self, prefix=''):
         stats = self.get_stats()
-        
+
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         chids=[]
         for id in sorted(stats['chain_ids']):

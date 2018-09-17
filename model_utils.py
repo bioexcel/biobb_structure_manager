@@ -2,12 +2,17 @@
   Utility functions to manipulate structures. based on Bio.PDB data model
 """
 
-import math
-import numpy as np
-from numpy import arccos, clip, cos, dot, pi, sin
-from numpy.linalg import norm
 from Bio.PDB.Atom import Atom
 from Bio.PDB.NeighborSearch import NeighborSearch
+import math
+import numpy as np
+from numpy import arccos
+from numpy import clip
+from numpy import cos
+from numpy import dot
+from numpy import pi
+from numpy import sin
+from numpy.linalg import norm
 import re
 import sys
 
@@ -50,25 +55,28 @@ na_residue_code = dna_residue_code + rna_residue_code
 
 # Residue ids
 
-def residue_id(r, models=False):
+def residue_id(r, models='auto'):
     """
     Friendly replacement for residue ids like ASN A324/0
     """
     return '{:>3} {}'.format(r.get_resname(), residue_num(r, models))
 
-def residue_num (r, models=False):
+def residue_num (r, models='auto'):
     """
     Shortcut for getting residue num including chain id, includes model number if any
     """
+    if models == 'auto':
+        models = len(r.get_parent().get_parent().get_parent()) > 1
+
     if has_ins_code(r):
         rn = str(r.get_parent().id) + str(r.id[1]) + r.id[2]
     else:
         rn = str(r.get_parent().id) + str(r.id[1])
     if models:
-        rn += "/" + str(r.get_parent().get_parent().id+1)
+        rn += "/" + str(r.get_parent().get_parent().id + 1)
     return rn
 
-def atom_id(at, models=False):
+def atom_id(at, models='auto'):
     """
     Friendly replacement for atom ids like ASN A324/0.CA
     """
@@ -132,7 +140,7 @@ def is_hetatm(r):
     return re.match('H_', r.id[0]) or re.match('W', r.id[0])
 
 def is_at_in_list(at, at_list):
-    rname = at.get_parent().get_resname().replace(' ','')
+    rname = at.get_parent().get_resname().replace(' ', '')
     if not rname in at_list:
         return at.id in at_list['*']
     else:
@@ -146,7 +154,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     Guesses chain type (protein, dna, or rna) from residue composition
     Allow for non-std residues.
     """
-    #TODO improve guessing for hybrid chains 
+    #TODO improve guessing for hybrid chains
     prot = 0.
     dna = 0.
     rna = 0.
@@ -166,14 +174,14 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     dna = dna / total
     rna = rna / total
     other = 1 - prot - dna - rna
-    if prot > thres or prot > dna+rna:
+    if prot > thres or prot > dna + rna:
         return PROTEIN
-    elif dna > thres or dna > prot+rna:
+    elif dna > thres or dna > prot + rna:
         return DNA
-    elif rna > thres or rna > prot+dna:
+    elif rna > thres or rna > prot + dna:
         return RNA
     else:
-        return [prot,dna,rna, other]
+        return [prot, dna, rna, other]
 
 def check_chiral_residue(r, chiral_data):
     """
@@ -214,14 +222,14 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
         chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
     return chi_ok
 
-def check_all_at_in_r(r,at_list):
-    miss_at={}
+def check_all_at_in_r(r, at_list):
+    miss_at = {}
     for group in ['backbone', 'side']:
-        miss_at[group]=[]
+        miss_at[group] = []
         for at_id in at_list[group]:
             if not at_id in r:
                 miss_at[group].append(at_id)
-    if len(miss_at['backbone']+miss_at['side'])>0:
+    if len(miss_at['backbone'] + miss_at['side']) > 0:
         return miss_at
     else:
         return {}
@@ -279,14 +287,14 @@ def get_residues_with_H(st):
     return resh_list
 
 def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists):
-    clash_list={'severe':{}}
+    clash_list = {'severe':{}}
     for cls in atom_lists:
-        clash_list[cls]={}
+        clash_list[cls] = {}
     for r_pair in rr_list:
-        [r1,r2,d] = r_pair
+        [r1, r2, d] = r_pair
         if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
-            c_list = check_rr_clashes(r1,r2, CLASH_DIST, atom_lists)
-            rkey = residue_id(r1)+'-'+residue_id(r2)
+            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists)
+            rkey = residue_id(r1) + '-' + residue_id(r2)
             for cls in c_list:
                 if len(c_list[cls]):
                     clash_list[cls][rkey] = c_list[cls]
@@ -294,11 +302,11 @@ def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists):
 
 def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
 
-    clash_list={}
-    min_dist={}
+    clash_list = {}
+    min_dist = {}
     for cls in atom_lists:
-        clash_list[cls]=[]
-        min_dist[cls]=999.
+        clash_list[cls] = []
+        min_dist[cls] = 999.
 
     if r1 != r2 and not seq_consecutive(r1, r2) and same_model(r1, r2):
         for at_pair in get_all_rr_distances(r1, r2):
@@ -343,8 +351,8 @@ def get_backbone_links(st, backbone_atoms, COVLNK):
             nbsearch = NeighborSearch(bckats)
 
             for at1, at2 in nbsearch.search_all(COVLNK):
-                if not same_residue(at1,at2):
-                    cov_links.append(sorted([at1,at2], key=lambda x: x.serial_number))
+                if not same_residue(at1, at2):
+                    cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
             print ("Warning: No backbone atoms defined")
 
@@ -419,7 +427,7 @@ def rename_atom(r, old_at, new_at):
     at.fullname = ' ' + new_at
     r.add(at)
 
-def delete_atom(r,at_id):
+def delete_atom(r, at_id):
     r.detach_child(at_id)
 
 def build_atom(r, at_id, res_lib, new_res_id):
@@ -429,15 +437,15 @@ def build_atom(r, at_id, res_lib, new_res_id):
         coords = buildCoordsOther(r, res_lib, new_res_id, at_id)
 
     at = Atom(
-        at_id,
-        coords,
-        99.0,
-        1.0,
-        ' ',
-        ' ' + at_id + ' ',
-        0,
-        at_id[0:1]
-        )
+              at_id,
+              coords,
+              99.0,
+              1.0,
+              ' ',
+              ' ' + at_id + ' ',
+              0,
+              at_id[0:1]
+              )
     r.add(at)
 
 def buildCoordsOther(r, res_lib, new_res, at_id):
@@ -547,7 +555,7 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
     """
     Gets a list of all at-at distances below a cutoff, at ids can be limited
     """
-    if not isinstance(at_ids,list):
+    if not isinstance(at_ids, list):
         at_ids = at_ids.split(',')
 
     dist_mat = []
@@ -567,7 +575,7 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
 
 def get_all_r2r_distances(st, r_ids='all', d_cutoff=0.):
     # Uses distances between the first atom of each residue as r-r distance
-    if not isinstance(r_ids,list):
+    if not isinstance(r_ids, list):
         r_ids = r_ids.split(',')
     dist_mat = []
     r_list = []
