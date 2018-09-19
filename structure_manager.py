@@ -1,3 +1,6 @@
+"""
+   Module to manage structure, based on BioPython Bio.PDB 
+"""
 import sys
 import warnings
 from Bio import BiopythonWarning
@@ -11,8 +14,10 @@ from Bio.PDB.parse_pdb_header import parse_pdb_header
 
 import structure_manager.model_utils as mu
 
-
 class StructureManager():
+    """
+        Main Class wrapping Bio.PDB structure object
+    """
 
     def __init__(self, input_pdb_path, debug=False):
         self.input_format = ''
@@ -46,8 +51,7 @@ class StructureManager():
             parser = MMCIFParser()
             self.input_format = 'cif'
         else:
-#                print ('ERROR: unknown filetype', file=sys.stderr)
-            sys.stderr.write("ERROR: unknown filetype\n")
+            print ('ERROR: unknown filetype', file=sys.stderr)
             sys.exit(2)
         try:
             warnings.simplefilter('ignore', BiopythonWarning)
@@ -58,26 +62,31 @@ class StructureManager():
                 self.headers = MMCIF2Dict(real_pdb_path)
 
         except OSError:
-    #print ("#ERROR: parsing PDB", file=sys.stderr)
-            sys.stderr.write ("#ERROR: parsing PDB\n")
+            print ("#ERROR: parsing PDB", file=sys.stderr)
             sys.exit(2)
+        # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
 
-    #Atom renumbering for mmCIF,
+    #Atom renumbering for mmCIF, PDB uses atom number in file
         if self.input_format == 'cif':
             self.atom_renumbering()
 
-    #checking models type
+    #checking models type according to RMS among models
         self.nmodels = len(self.st)
         if self.nmodels > 1:
             self.models_type = mu.guess_models_type(self.st)
         else:
             self.models_type = 0
-
+    #Identify chains and guess type (protein, dna, ...)
         self.set_chain_ids()
+    #Calc general stats (num residues, atoms, etc)
         self.calc_stats()
-
+        
     def residue_renumbering(self):
+        """
+        Add a .index attribute to residues for unique, consecutive, residue number,
+        and stores a residue list  accordingly
+        """
         i = 1
         self.all_residues=[]
         for r in self.st.get_residues():
@@ -87,7 +96,7 @@ class StructureManager():
 
     def atom_renumbering(self):
         i = 1
-        for at in self.st.get_atoms(): # Check numbering in models
+        for at in self.st.get_atoms(): 
             at.serial_number = i
             if hasattr(at, 'selected_child'):
                 at.selected_child.serial_number = i
@@ -96,7 +105,7 @@ class StructureManager():
     def calc_stats(self):
         nr = 0
         na = 0
-        hi = 0
+        hi =     0
         wi = 0
         insi = 0
         for r in self.st.get_residues():
@@ -107,13 +116,18 @@ class StructureManager():
                 hi += 1
             if mu.has_ins_code(r):
                 insi += 1
-            na += len(r.get_list()) # Check numbering in models
+            na += len(r.get_list())
         self.num_res = nr
         self.num_ats = na
         self.res_insc = insi
         self.res_hetats = hi
         self.res_ligands = hi-wi
         self.num_wat = wi
+        # Detecting whether it is a CA-only structure
+        # num_ats should be much larger than num_res
+        # waters removed
+        # Taking polyGly as a lower limit
+        self.ca_only = nr - wi < (nr-wi)*4 
 
     def get_ins_codes(self):
         self.ins_codes_list=[]
@@ -188,11 +202,9 @@ class StructureManager():
         for lnk in self.backbone_links:
             [at1, at2] = lnk
             self.residue_link_to[at1.get_parent()]=at2.get_parent()
-            # missing residues
             # diff chain
             # no n->n+1
-            # missing n->n+1
-
+   
     def check_cis_backbone(self, backbone_atoms, COVLNK):
         CISTHRES = 20  #TODO check vaules withpdb checking
         TRANSTHRES = 160
@@ -211,13 +223,6 @@ class StructureManager():
                 elif abs(dih) < TRANSTHRES:
                     self.lowtrans_backbone_list.append([r1,r2,dih])
 
-
-
-
-
-
-
-
     def get_stats(self):
         return {
             'nmodels': self.nmodels,
@@ -228,7 +233,8 @@ class StructureManager():
             'res_insc': self.res_insc,
             'res_hetats': self.res_hetats,
             'res_ligands': self.res_ligands,
-            'num_wat': self.num_wat
+            'num_wat': self.num_wat,
+            'ca_only': self.ca_only
         }
     def print_headers(self):
         if self.input_format== 'cif':
@@ -251,11 +257,11 @@ class StructureManager():
 
         print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         chids=[]
-        for id in sorted(stats['chain_ids']):
-            if isinstance(stats['chain_ids'][id],list):
-                chids.append('{}: Unknown '.format(id))
+        for ch_id in sorted(stats['chain_ids']):
+            if isinstance(stats['chain_ids'][ch_id],list):
+                chids.append('{}: Unknown '.format(ch_id))
             else:
-                chids.append('{}: {}'.format(id, mu.chain_type_labels[stats['chain_ids'][id]]))
+                chids.append('{}: {}'.format(ch_id, mu.chain_type_labels[stats['chain_ids'][ch_id]]))
         print ('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ', '.join(chids)))
         print ('{} Num. residues:  {}'.format(prefix, stats['num_res']))
         print ('{} Num. residues with ins. codes:  {}'.format(prefix, stats['res_insc']))
@@ -263,7 +269,8 @@ class StructureManager():
         print ('{} Num. ligands or modified residues:  {}'.format(prefix, stats['res_ligands']))
         print ('{} Num. water mol.:  {}'.format(prefix, stats['num_wat']))
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
-
+        if stats['ca_only']:
+            print ('Possible CA-Only structure')
 
     def get_structure(self):
         return self.st
@@ -280,7 +287,8 @@ class StructureManager():
         else:
             sys.stderr.write ("Error: output_pdb_path not provided \n")
             sys.exit(1)
-
+            
+# Methods to modify structure
     def select_model(self, nm):
         ids = []
         for md in self.st.get_models():
@@ -364,7 +372,6 @@ class StructureManager():
                 0,
                 at_id[0:1]
                 ))
-
 
         self.modified=True
 

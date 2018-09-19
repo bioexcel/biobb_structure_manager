@@ -422,7 +422,7 @@ def rename_atom(r, old_at, new_at):
     at = r[old_at]
     r.detach_child(at.id)
     at.id = new_at
-    at_full_id = new_at
+    at.full_id = new_at
     at.element = new_at[0:1]
     at.fullname = ' ' + new_at
     r.add(at)
