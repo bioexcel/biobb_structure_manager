@@ -211,13 +211,6 @@ class StructureManager():
                 elif abs(dih) < TRANSTHRES:
                     self.lowtrans_backbone_list.append([r1,r2,dih])
 
-
-
-
-
-
-
-
     def get_stats(self):
         return {
             'nmodels': self.nmodels,
