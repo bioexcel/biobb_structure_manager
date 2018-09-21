@@ -75,8 +75,8 @@ class DataLibManager():
         return rlist
 
     def get_mutation_map(self):
-        map={}
+        mut_rules={}
         for rcode in self.residue_data:
             if 'mutation_rules' in self.residue_data[rcode]:
-                map[rcode]=self.residue_data[rcode]['mutation_rules']
-        return(map)
+                mut_rules[rcode]=self.residue_data[rcode]['mutation_rules']
+        return(mut_rules)

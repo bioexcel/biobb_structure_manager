@@ -5,8 +5,6 @@
 import re
 import sys
 
-from Bio.PDB.Atom import Atom
-
 import structure_manager.model_utils as mu
 
 ADD = 'Add'
@@ -22,6 +20,7 @@ class MutationManager():
             #Load from file
             id_list = id_list.replace ('file:', '')
             print ('Reading mutation list from file ' + id_list)
+            self.id_list=[]
             for line in open(id_list, 'r'):
                 self.id_list.append(line.replace('\n', '').replace('\r', ''))
 
