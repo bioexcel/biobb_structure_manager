@@ -181,14 +181,11 @@ class StructureManager():
         for lnk in self.backbone_links:
             [at1, at2] = lnk
             self.residue_link_to[at1.get_parent()]=at2.get_parent()
-            # missing residues
-            # diff chain
-            # no n->n+1
-            # missing n->n+1
 
-    def check_cis_backbone(self, backbone_atoms, COVLNK):
+    def check_cis_backbone(self, COVLNK):
         CISTHRES = 20  #TODO check vaules withpdb checking
         TRANSTHRES = 160
+        backbone_atoms = ['N','C']
         if not hasattr(self,'backbone_links'):
             self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
         self.cis_backbone_list = []
@@ -197,20 +194,13 @@ class StructureManager():
             [at1, at2] = lnk
             r1 = at1.get_parent()
             r2 = at2.get_parent()
-            if 'CA' in r1 and 'CA' in r2:
+            if 'CA' in r1 and 'C' in r1 and 'CA' in r2 and 'N' in r2:
                 dih =  mu.calc_bond_dihedral(r1['CA'],r1['C'],r2['N'],r2['CA'])
                 if abs(dih) < CISTHRES:
                     self.cis_backbone_list.append([r1,r2,dih])
                 elif abs(dih) < TRANSTHRES:
                     self.lowtrans_backbone_list.append([r1,r2,dih])
-                    
-            
-
-
-
-
-
-
+   
     def get_stats(self):
         return {
             'nmodels': self.nmodels,
