@@ -339,7 +339,7 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
                             min_dist[cls] = dist
     return clash_list
 
-def get_backbone_links(st, backbone_atoms, COVLNK):
+def get_backbone_links(st, backbone_atoms, COVLNK): #TODO differenciate Protein and NA
     cov_links = []
     for m in st:
         bckats = []
@@ -573,7 +573,7 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
     return dist_mat
 
 
-def get_all_r2r_distances(st, r_ids='all', d_cutoff=0.):
+def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
     # Uses distances between the first atom of each residue as r-r distance
     if not isinstance(r_ids, list):
         r_ids = r_ids.split(',')
@@ -587,9 +587,11 @@ def get_all_r2r_distances(st, r_ids='all', d_cutoff=0.):
         ati = r_list[i].child_list[0]
         for j in range(i + 1, len(r_list)):
             atj = r_list[j].child_list[0]
-            d = calc_at_sq_dist(ati, atj)
-            if d_cutoff > 0. and d < d_cut2:
-                dist_mat.append ([r_list[i], r_list[j], d])
+            if not check_models or same_model(r_list[i],r_list[j]):
+                print (atom_id(ati, True),atom_id(atj, True))
+                d = calc_at_sq_dist(ati, atj)
+                if d_cutoff > 0. and d < d_cut2:
+                    dist_mat.append ([r_list[i], r_list[j], d])
     return dist_mat
 
 def calc_RMSd_ats (ats1, ats2):
@@ -623,8 +625,11 @@ def get_all_rr_distances(r1, r2, with_h=False):
         for at2 in r2.get_atoms():
             if at2.element == 'H' and not with_h:
                 continue
+            d = calc_at_dist(at1,at2)
             if at1.serial_number < at2.serial_number:
-                dist_mat.append ([at1, at2, calc_at_dist(at1, at2)])
+                dist_mat.append ([at1, at2, d])
+            else:
+                dist_mat.append ([at2, at1, d])
     return dist_mat
 
 def guess_models_type(st, threshold=MODELS_MAXRMS):
