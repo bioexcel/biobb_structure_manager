@@ -32,6 +32,12 @@ BUNIT = 2
 MODELS_MAXRMS = 15.0    # Threshold value to detect NMR models (angs)
 model_type_labels = {ENSM:'Ensembl', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
 
+#HetAtm Types
+MODRES = 1
+METAL = 2
+ORGANIC = 3
+COVORGANIC = 4
+WAT = 5
 
 # TODO: consider replace by Bio.PDB equivalent
 one_letter_residue_code = {
@@ -221,12 +227,13 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
         v3 = r[at4].coord-r[at2].coord
         chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
     return chi_ok
+
 def invert_chirality (r, at1, at2, at3, at4):
-"""
-Inverts chirality of at2 by rotating at4, and the associated end chain atoms
-"""
+    """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
+    """
     #TODO
     pass
+
 def check_all_at_in_r(r, at_list):
     miss_at = {}
     for group in ['backbone', 'side']:

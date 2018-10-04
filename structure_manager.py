@@ -118,6 +118,8 @@ class StructureManager():
         self.set_chain_ids()
     #Calc general stats (num residues, atoms, etc)
         self.calc_stats()
+    # Guess HETATM types
+        self.guess_hetatm()
 
     def residue_renumbering(self):
         """Sets the Bio.PDB.Residue.index attribute to residues for a unique,
@@ -140,7 +142,26 @@ class StructureManager():
             if hasattr(at, 'selected_child'):
                 at.selected_child.serial_number = i
             i += 1
-
+            
+    def guess_hetatm(self):
+        """ Guesses HETATM type as modified res, metal, wat, organic
+        """
+        self.hetatm={}
+        for ty  in [mu.UNKNOWN, mu.MODRES, mu.METAL, mu.ORGANIC, mu.COVORGANIC, mu.WAT]:
+            self.hetatm[ty]=[]
+        for r in self.get_structure().get_residues():
+            if not mu.is_hetatm(r):
+                continue
+            if mu.is_wat(r):
+                self.hetatm[mu.WAT].append(r)                
+            elif len(r) == 1:
+                self.hetatm[mu.METAL].append(r)
+            elif 'N' in r or 'C' in r: # modified aminoacid candidate, TODO check connectivity with n-1 or n+1
+                self.hetatm[mu.MODRES].append(r)            
+            #TODO check modified nucleotides
+            else:
+                self.hetatm[mu.ORGANIC].append(r)            
+                
     def calc_stats(self):
         """Calculates general statistics about the structure, and guesses whether
         it is a CA-only structure
@@ -388,6 +409,19 @@ class StructureManager():
         print ('{} Num. atoms:  {}'.format(prefix, stats['num_ats']))
         if stats['ca_only']:
             print ('Possible CA-Only structure')
+        if len(self.hetatm[mu.MODRES]):
+            print ('Modified residues found')
+            for r in self.hetatm[mu.MODRES]:
+                print (mu.residue_id(r))
+        if len(self.hetatm[mu.METAL]):
+            print ('Metal/Ion residues found')
+            for r in self.hetatm[mu.METAL]:
+                print (mu.residue_id(r))
+        if len(self.hetatm[mu.ORGANIC]):
+            print ('Small mol ligands found')
+            for r in self.hetatm[mu.ORGANIC]:
+                print (mu.residue_id(r))
+            
 
     def get_structure(self):
         """
