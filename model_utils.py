@@ -202,7 +202,7 @@ def check_chiral_ca(r):
 
 def check_chiral(r, at1, at2, at3, at4, sign=1.):
     """
-    Checks proper chirality.
+    Checks proper chirality of at2 atom.
     at1-at3 define reference plane.
     Position of at4 with respect to the plane is checked.
     Sign (+1,-1) allows to check for a specific enantiomer.
@@ -221,7 +221,12 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
         v3 = r[at4].coord-r[at2].coord
         chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
     return chi_ok
-
+def invert_chirality (r, at1, at2, at3, at4):
+"""
+Inverts chirality of at2 by rotating at4, and the associated end chain atoms
+"""
+    #TODO
+    pass
 def check_all_at_in_r(r, at_list):
     miss_at = {}
     for group in ['backbone', 'side']:
@@ -588,7 +593,7 @@ def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
         for j in range(i + 1, len(r_list)):
             atj = r_list[j].child_list[0]
             if not check_models or same_model(r_list[i],r_list[j]):
-                print (atom_id(ati, True),atom_id(atj, True))
+#                print (atom_id(ati, True),atom_id(atj, True))
                 d = calc_at_sq_dist(ati, atj)
                 if d_cutoff > 0. and d < d_cut2:
                     dist_mat.append ([r_list[i], r_list[j], d])
