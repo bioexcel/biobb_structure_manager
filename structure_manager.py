@@ -2,6 +2,8 @@
 """
 import sys
 import warnings
+import os
+import gzip
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
@@ -10,6 +12,10 @@ from Bio.PDB.PDBList import PDBList
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.Atom import Atom
 from Bio.PDB.parse_pdb_header import parse_pdb_header
+from Bio._py3k import _as_string 
+from Bio._py3k import urlopen as _urlopen 
+from Bio._py3k import urlretrieve as _urlretrieve 
+from Bio._py3k import urlcleanup as _urlcleanup
 
 import structure_manager.model_utils as mu
 
@@ -17,7 +23,7 @@ class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
 
-    def __init__(self, input_pdb_path):
+    def __init__(self, input_pdb_path, server='default'):
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
@@ -65,13 +71,22 @@ class StructureManager():
         self.modified = False
         self.all_residues = []
 
-# TODO support biounits
         if "pdb:"in input_pdb_path:
-            pdbl = PDBList(pdb='tmpPDB')
-
+            if server == 'default':
+                pdbl = MyPDBList(pdb='tmpPDB')
+            else:
+                pdbl = MyPDBList(pdb='tmpPDB', server=server)
             try:
-                input_pdb_path = input_pdb_path[4:].upper()
-                real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format='mmCif')
+                if '.' in input_pdb_path:
+                    [pdbid,biounit]=input_pdb_path.split('.')
+                    input_pdb_path = pdbid[4:].upper()
+                    if server != 'mmb':
+                        print ("Error: Biounits supported only on mmb server", file=sys.stderr)
+                        sys.exit(1)
+                    real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format='pdb', biounit=biounit)
+                else:
+                    input_pdb_path = input_pdb_path[4:].upper()
+                    real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format='mmCif')
                 parser = MMCIFParser()
                 self.input_format = 'cif'
 
@@ -582,3 +597,51 @@ class StructureManager():
                 ))
 
         self.modified=True
+
+class MyPDBList(PDBList):
+    def retrieve_pdb_file(self, pdb_code, obsolete=False, pdir=None, file_format=None, overwrite=False, biounit=False): 
+        if self.pdb_server != 'mmb':
+            return super().retrieve_pdb_file(pdb_code,obsolete,pdir,file_format,overwrite)
+        self._verbose=True
+        code = pdb_code.lower() 
+   
+        if file_format in ('pdb', 'mmCif', 'xml'): 
+            file_type = "pdb" if file_format == "pdb" else "mmCIF" if file_format == "mmCif" else "XML"
+            if file_format == 'mmCif':
+                file_format = 'cif'
+            if not biounit:
+                url = ('http://mmb.irbbarcelona.org/api/pdb/%s.%s' % (code, file_format))
+            else:
+                file_format='pdb'
+                url = ('http://mmb.irbbarcelona.org/api/pdb/%s_bn%s.pdb' % (code, biounit))
+        else:
+            print ("File format not supported")
+            sys.exit(1)
+        print (url)
+#Where does the final PDB file get saved? 
+        if pdir is None: 
+            path = self.local_pdb if not obsolete else self.obsolete_pdb 
+            if not self.flat_tree:  # Put in PDB-style directory tree 
+                path = os.path.join(path, code[1:3])  
+        else:  # Put in specified directory 
+            path = pdir 
+        if not os.access(path, os.F_OK): 
+            os.makedirs(path) 
+        final = {'pdb': '%s.pdb', 'mmCif': '%s.cif', 'cif': '%s.cif','xml': '%s.xml'} 
+        final_file = os.path.join(path, final[file_format] % code)
+        # Skip download if the file already exists 
+        if not overwrite: 
+            if os.path.exists(final_file): 
+                if self._verbose: 
+                    print("Structure exists: '%s' " % final_file) 
+                return final_file 
+
+        # Retrieve the file
+        if self._verbose: 
+            print("Downloading PDB structure '%s'..." % pdb_code) 
+        try: 
+            _urlcleanup() 
+            _urlretrieve(url, final_file) 
+        except IOError: 
+                print("Desired structure doesn't exists") 
+        return final_file      
