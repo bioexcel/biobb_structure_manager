@@ -23,7 +23,7 @@ class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
 
-    def __init__(self, input_pdb_path, server='default'):
+    def __init__(self, input_pdb_path, pdb_server='default'):
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
@@ -31,6 +31,8 @@ class StructureManager():
             **input_pdb_path** (str): path to input structure either in pdb or
             mmCIF format. Format is taken from file extension.
             Alternatively **pdb:pdbId** fetches the mmCif file from RCSB
+            
+            **pdb_server** (str) : **default** for Bio.PDB defaults (RCSB), **mmb** for MMB PDB API 
 
         Object structure:
             {
@@ -72,15 +74,12 @@ class StructureManager():
         self.all_residues = []
 
         if "pdb:"in input_pdb_path:
-            if server == 'default':
-                pdbl = MyPDBList(pdb='tmpPDB')
-            else:
-                pdbl = MyPDBList(pdb='tmpPDB', server=server)
+            pdbl = MMBPDBList(pdb='tmpPDB', server=pdb_server) # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             try:
                 if '.' in input_pdb_path:
                     [pdbid,biounit]=input_pdb_path.split('.')
                     input_pdb_path = pdbid[4:].upper()
-                    if server != 'mmb':
+                    if pdb_server != 'mmb':
                         print ("Error: Biounits supported only on mmb server", file=sys.stderr)
                         sys.exit(1)
                     real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format='pdb', biounit=biounit)
@@ -598,11 +597,20 @@ class StructureManager():
 
         self.modified=True
 
-class MyPDBList(PDBList):
+class MMBPDBList(PDBList):
+    
+    url_prefix = 'http://mmb.irbbarcelona.org/api/pdb'
+    
     def retrieve_pdb_file(self, pdb_code, obsolete=False, pdir=None, file_format=None, overwrite=False, biounit=False): 
+        """
+            Replacement for Bio.PDB.PDBList.retrieve_pdb_file to support MMB PDB API
+            Defaults to super() if standard server
+        """        
         if self.pdb_server != 'mmb':
-            return super().retrieve_pdb_file(pdb_code,obsolete,pdir,file_format,overwrite)
+            return super().retrieve_pdb_file(pdb_code, obsolete, pdir, file_format, overwrite)
+        
         self._verbose=True
+        
         code = pdb_code.lower() 
    
         if file_format in ('pdb', 'mmCif', 'xml'): 
@@ -610,14 +618,13 @@ class MyPDBList(PDBList):
             if file_format == 'mmCif':
                 file_format = 'cif'
             if not biounit:
-                url = ('http://mmb.irbbarcelona.org/api/pdb/%s.%s' % (code, file_format))
+                url = (MMBPDBList.url_prefix + '/%s.%s' % (code, file_format))
             else:
                 file_format='pdb'
-                url = ('http://mmb.irbbarcelona.org/api/pdb/%s_bn%s.pdb' % (code, biounit))
+                url = (MMBPDBList.url_prefix+'/%s_bn%s.pdb' % (code, biounit))
         else:
-            print ("File format not supported")
+            print ("MMB Server: File format not supported")
             sys.exit(1)
-        print (url)
 #Where does the final PDB file get saved? 
         if pdir is None: 
             path = self.local_pdb if not obsolete else self.obsolete_pdb 
@@ -643,5 +650,5 @@ class MyPDBList(PDBList):
             _urlcleanup() 
             _urlretrieve(url, final_file) 
         except IOError: 
-                print("Desired structure doesn't exists") 
+            print("Desired structure doesn't exists") 
         return final_file      
