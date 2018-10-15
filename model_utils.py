@@ -298,21 +298,21 @@ def get_residues_with_H(st):
             resh_list.append({'r':r, 'n_h':has_h})
     return resh_list
 
-def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists):
+def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True):
     clash_list = {'severe':{}}
     for cls in atom_lists:
         clash_list[cls] = {}
     for r_pair in rr_list:
         [r1, r2, d] = r_pair
         if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
-            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists)
+            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model)
             rkey = residue_id(r1) + '-' + residue_id(r2)
             for cls in c_list:
                 if len(c_list[cls]):
                     clash_list[cls][rkey] = c_list[cls]
     return clash_list
 
-def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
+def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
 
     clash_list = {}
     min_dist = {}
@@ -320,7 +320,7 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists):
         clash_list[cls] = []
         min_dist[cls] = 999.
 
-    if r1 != r2 and not seq_consecutive(r1, r2) and same_model(r1, r2):
+    if r1 != r2 and not seq_consecutive(r1, r2) and (in_model and same_model(r1, r2)):
         for at_pair in get_all_rr_distances(r1, r2):
             [at1, at2, dist] = at_pair
             if 'severe' in atom_lists and dist < CLASH_DIST['severe']:
