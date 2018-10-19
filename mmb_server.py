@@ -11,7 +11,6 @@ url_prefix = 'http://mmb.irbbarcelona.org/api/pdb'
 
 class MMBPDBList(PDBList):
     
-    
     def retrieve_pdb_file(self, pdb_code, obsolete=False, pdir=None, file_format=None, overwrite=False, biounit=False): 
         """
             Replacement for Bio.PDB.PDBList.retrieve_pdb_file to support MMB PDB API
