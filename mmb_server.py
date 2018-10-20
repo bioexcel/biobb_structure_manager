@@ -44,9 +44,13 @@ class MMBPDBList(PDBList):
             path = pdir 
         if not os.access(path, os.F_OK): 
             os.makedirs(path) 
-        final = {'pdb': '%s.pdb', 'mmCif': '%s.cif', 'cif': '%s.cif','xml': '%s.xml'} 
-        final_file = os.path.join(path, final[file_format] % code)
-        # Skip download if the file already exists 
+        if biounit:
+            final = {'pdb': '%s_%s.pdb', 'mmCif': '%s_%s.cif', 'cif': '%s_%s.cif','xml': '%s_%s.xml'} 
+            final_file = os.path.join(path, final[file_format] % (code, biounit))
+        else:
+            final = {'pdb': '%s.pdb', 'mmCif': '%s.cif', 'cif': '%s.cif','xml': '%s.xml'} 
+            final_file = os.path.join(path, final[file_format] % code)
+     # Skip download if the file already exists 
         if not overwrite: 
             if os.path.exists(final_file): 
                 if self._verbose: 
@@ -54,8 +58,11 @@ class MMBPDBList(PDBList):
                 return final_file 
 
         # Retrieve the file
-        if self._verbose: 
-            print("Downloading PDB structure '%s'..." % pdb_code) 
+        if self._verbose:
+            if biounit:
+                print("Downloading PDB structure '%s.%s'..." % (pdb_code, biounit)) 
+            else:
+                print("Downloading PDB structure '%s'..." % pdb_code) 
         try: 
             _urlcleanup() 
             _urlretrieve(url, final_file) 
