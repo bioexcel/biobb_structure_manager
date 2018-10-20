@@ -486,6 +486,7 @@ class StructureManager():
         self.residue_renumbering()
         self.atom_renumbering()
         self.set_chain_ids()
+        self.guess_hetatm()
         self.modified=True
 
     def has_models(self):
@@ -529,6 +530,7 @@ class StructureManager():
         self.set_chain_ids()
         self.atom_renumbering()
         self.residue_renumbering()
+        self.guess_hetatm()
         self.modified=True
 
     def select_altloc_residue(self, res, to_fix):
@@ -564,9 +566,12 @@ class StructureManager():
         Removes residue **r** from the structure. Triggers **modified** flag
         and atom and residue renumbering
         """
+        htm = mu.is_hetatm(r)
         mu.remove_residue(r)
         self.atom_renumbering()
         self.residue_renumbering()
+        if htm:
+            self.guess_hetatm()
         self.modified=True
 
     def fix_side_chain(self,r_at, res_library):
