@@ -67,7 +67,7 @@ class StructureManager():
         self.modified = False
         self.all_residues = []
         self.biounit=False
-        if "pdb:"in input_pdb_path
+        if "pdb:"in input_pdb_path:
             pdbl = MMBPDBList(pdb=cache_dir, server=pdb_server) # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             try:
                 if '.' in input_pdb_path:
