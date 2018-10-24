@@ -17,7 +17,7 @@ class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
 
-    def __init__(self, input_pdb_path, pdb_server='ftp://ftp.wwpdb.org'):
+    def __init__(self, input_pdb_path, pdb_server='ftp://ftp.wwpdb.org', cache_dir='tmpPDB'):
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
@@ -67,8 +67,8 @@ class StructureManager():
         self.modified = False
         self.all_residues = []
         self.biounit=False
-        if "pdb:"in input_pdb_path:
-            pdbl = MMBPDBList(pdb='tmpPDB', server=pdb_server) # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
+        if "pdb:"in input_pdb_path
+            pdbl = MMBPDBList(pdb=cache_dir, server=pdb_server) # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             try:
                 if '.' in input_pdb_path:
                     [pdbid,biounit]=input_pdb_path.split('.')
