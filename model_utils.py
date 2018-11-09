@@ -143,10 +143,11 @@ def is_hetatm(r):
     """
     Shortcut to check for HETATM residues
     """
-    return re.match('H_', r.id[0]) or re.match('W', r.id[0])
+    return r.id[0][0:2] == 'H_' or 'W' == r.id[0]
 
-def is_at_in_list(at, at_list):
-    rname = at.get_parent().get_resname().replace(' ', '')
+def is_at_in_list(at, at_list, rname=None):
+    if rname is None:
+        rname = at.get_parent().get_resname().replace(' ', '')
     if not rname in at_list:
         return at.id in at_list['*']
     else:
@@ -315,40 +316,47 @@ def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True)
 def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
 
     clash_list = {}
-    min_dist = {}
+    min_dist2 = {}
+    CLASH_DIST2 = {}
     for cls in atom_lists:
         clash_list[cls] = []
-        min_dist[cls] = 999.
+        min_dist2[cls] = 99999.
+        CLASH_DIST2[cls] = CLASH_DIST[cls]**2
+        
 
     if r1 != r2 and not seq_consecutive(r1, r2) and (in_model and same_model(r1, r2)):
         for at_pair in get_all_rr_distances(r1, r2):
-            [at1, at2, dist] = at_pair
-            if 'severe' in atom_lists and dist < CLASH_DIST['severe']:
-                if dist < min_dist:
+            [at1, at2, dist2] = at_pair
+            r1 = at1.get_parent()
+            rname1 = r1.get_resname()
+            r2 = at2.get_parent()
+            rname2 = r2.get_resname()
+            if 'severe' in atom_lists and dist2 < CLASH_DIST['severe']**2:
+                if dist2 < min_dist2:
                     clash_list['severe'] = at_pair
-                    min_dist['severe'] = dist
+                    min_dist2['severe'] = dist2
             else:
                 for cls in atom_lists:
                     if cls == 'apolar':
                         #Only one of the atoms should be apolar
-                        if not is_at_in_list(at1, atom_lists[cls]) and not is_at_in_list(at2, atom_lists[cls]):
+                        if not is_at_in_list(at1, atom_lists[cls], rname1) and not is_at_in_list(at2, atom_lists[cls], rname2):
                             continue
                         #Remove n->n+2 backbone clashes. TODO Improve
-                        if abs(at1.get_parent().index - at2.get_parent().index) <= 2:
+                        if abs(r1.index - r2.index) <= 2:
                             continue
                         #Remove Ca2+ looking like backbone CA's
-                        if is_hetatm(at1.get_parent()) and at1.id == 'CA' or \
-                            is_hetatm(at2.get_parent()) and at2.id == 'CA':
+                        if is_hetatm(r1) and at1.id == 'CA' or \
+                            is_hetatm(r2) and at2.id == 'CA':
                                 continue
                     else:
                         # Both atoms should be of the same kind
-                        if not is_at_in_list(at1, atom_lists[cls]) or not is_at_in_list(at2, atom_lists[cls]):
+                        if not is_at_in_list(at1, atom_lists[cls], rname1) or not is_at_in_list(at2, atom_lists[cls], rname2):
                             continue
-                    if dist < CLASH_DIST[cls]:
+                    if dist2 < CLASH_DIST2[cls]:
 
-                        if dist < min_dist[cls]:
+                        if dist2 < min_dist2[cls]:
                             clash_list[cls] = at_pair
-                            min_dist[cls] = dist
+                            min_dist2[cls] = dist2
     return clash_list
 
 def get_backbone_links(st, backbone_atoms, COVLNK): #TODO differenciate Protein and NA
@@ -637,7 +645,7 @@ def get_all_rr_distances(r1, r2, with_h=False):
         for at2 in r2.get_atoms():
             if at2.element == 'H' and not with_h:
                 continue
-            d = calc_at_dist(at1,at2)
+            d = calc_at_sq_dist(at1,at2)
             if at1.serial_number < at2.serial_number:
                 dist_mat.append ([at1, at2, d])
             else:
