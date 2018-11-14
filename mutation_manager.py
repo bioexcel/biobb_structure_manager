@@ -160,7 +160,7 @@ class Mutation():
             for at_id in extra_adds:
                 print ("  Adding new atom " + at_id)
                 mu.build_atom(r, at_id, res_lib, self.new_id)
-            for at_id in mut_map[r.get_resname()][self.new_id][ADD]:
+            for at_id in mut_map[rname][self.new_id][ADD]:
                 print ("  Adding new atom " + at_id)
                 mu.build_atom(r, at_id, res_lib, self.new_id)
 #Renaming residue
