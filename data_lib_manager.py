@@ -79,4 +79,5 @@ class DataLibManager():
         for rcode in self.residue_data:
             if 'mutation_rules' in self.residue_data[rcode]:
                 mut_rules[rcode]=self.residue_data[rcode]['mutation_rules']
+                mut_rules[rcode]['side_atoms'] = self.residue_data[rcode]['side_atoms']
         return(mut_rules)

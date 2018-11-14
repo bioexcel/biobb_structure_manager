@@ -19,7 +19,7 @@ class MutationManager():
         if 'file:' in id_list:
             #Load from file
             id_list = id_list.replace ('file:', '')
-            print ('Reading mutation list from file ' + id_list)
+            print ('Reading mutation list from file {}'.format(id_list))
             self.id_list=[]
             for line in open(id_list, 'r'):
                 self.id_list.append(line.replace('\n', '').replace('\r', ''))
@@ -91,12 +91,12 @@ class Mutation():
                             })
                         ok += 1
                     else:
-                        print ('#WARNING: Unknown residue ' + ch + ':' + self.old_id + self.res_num)
+                        print ('#WARNING: Unknown residue {}:{}{}'.format(ch, self.old_id,self.res_num))
                 else:
-                    print ("#WARNING: Unknown residue " + ch + ':' + self.old_id + self.res_num)
+                    print ('#WARNING: Unknown residue {}:{}{}',format(ch,self.old_id,self.res_num))
 
         if ok == 0 and stop_on_error:
-            print ("#ERROR: no mutations available for " + self.id)
+            print ('#ERROR: no mutations available for {}'.format(self.id), file=sys.stderr)
             sys.exit(1)
 
     def apply(self, st, mut_map, res_lib, remove_H, debug=False):
@@ -107,26 +107,62 @@ class Mutation():
         mutated_res=[]
         for m in self.mutations:
             r = st[m['model']][m['chain']][m['residue']]
-            print ("Replacing " + mu.residue_id(r) + " into " + self.new_id)
-# Renaming ats
-            for rule in mut_map[r.get_resname()][self.new_id][MOV]:
-                [old_at, new_at] = rule.split("-")
-                print ("  Renaming " + old_at + " to " + new_at)
-                mu.rename_atom(r, old_at, new_at)
-
-# Deleting atoms
-            for at_id in mut_map[r.get_resname()][self.new_id][DEL]:
-                print ("  Deleting " + at_id)
-                mu.delete_atom(r, at_id)
+            rname = r.get_resname().replace(' ','')
 # Deleting H
             if remove_H == 'mut':
                 mu.remove_H_from_r(r, verbose= True)
+            # checking side chain
+            side_atoms=[]
+            bck_atoms=[]
+            for at in r.get_atoms():
+                if at.id in mut_map[rname]['side_atoms']:
+                    side_atoms.append(at.id)
+                else:
+                    bck_atoms.append(at.id)
+            for at_id in ['N','CA','C']:
+                if at_id not in bck_atoms:
+                    print ('#ERROR: Backbone atoms missing for {}, aborting'.format(mu.residue_id(r)), file=sys.stderr)
+                    sys.exit(1)
+            missing_ats = []
+            for at_id in mut_map[rname]['side_atoms']:
+                if at_id not in side_atoms:
+                    missing_ats.append(at_id)
+            print ("Replacing " + mu.residue_id(r) + " into " + self.new_id)
+            in_rules = []
+            extra_adds=[]
+# Renaming ats
+            for rule in mut_map[rname][self.new_id][MOV]:
+                [old_at, new_at] = rule.split("-")
+                print ('  Renaming {} to {}'.format(old_at,new_at))
+                if old_at in side_atoms:
+                    mu.rename_atom(r, old_at, new_at)
+                else:
+                    print ('#WARNING: atom {} missing in {}'.format(old_at, mu.residue_id(r)))
+                in_rules.append(old_at)
+                extra_adds.append(new_at)
+
+# Deleting atoms
+            for at_id in mut_map[rname][self.new_id][DEL]:
+                print ('  Deleting {}'.format(at_id))
+                if at_id in side_atoms:
+                    mu.delete_atom(r, at_id)
+                else:
+                    print ('#WARNING: atom {} already missing in {}'.format(at_id,mu.residue_id(r)))
+                in_rules.append(at_id)
+
 
 # Adding atoms (new_id required as r.resname is still the original)
-            for at_id in mut_map[r.get_resname()][self.new_id][ADD]:
-                print ("  Adding new atom " + at_id)
+# Adding missing atoms that keep name
+            for at_id in mut_map[rname]['side_atoms']:
+                if at_id not in in_rules and at_id in missing_ats:
+                    print ('  Adding missing atom {}'.format(at_id))
+                    mu.build_atom(r, at_id, res_lib, self.new_id)
+            for at_id in extra_adds:
+                print ('  Adding new atom {}'.format(at_id))
                 mu.build_atom(r, at_id, res_lib, self.new_id)
-
+            for at_id in mut_map[rname][self.new_id][ADD]:
+                print ('  Adding new atom {}'.format(at_id))
+                mu.build_atom(r, at_id, res_lib, self.new_id)
 #Renaming residue
             r.resname = self.new_id
             mutated_res.append(r)
