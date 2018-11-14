@@ -248,17 +248,16 @@ def check_all_at_in_r(r, at_list):
         return {}
 
 def get_altloc_residues(st):
-    """
-    Gets list of residue  with atoms with alternative location labels
-
+    """ Gets list of residue  with atoms with alternative location labels
     """
     res_list = {}
-    for at in st.get_atoms():
-        r = at.get_parent()
-        if at.get_altloc() != ' ':
-            if r not in res_list:
-                res_list[r] = []
-            res_list[r].append(at)
+    for r in st.get_residues():
+        for at in r.get_atoms():
+#        r = at.get_parent()
+           if at.get_altloc() != ' ':
+                if r not in res_list:
+                    res_list[r] = []
+                res_list[r].append(at)
     return res_list
 
 def get_metal_atoms(st, metal_ats):

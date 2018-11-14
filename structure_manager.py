@@ -112,7 +112,6 @@ class StructureManager():
             sys.exit(2)
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
-
     #Atom renumbering for mmCIF, PDB uses atom number in file
         if self.input_format == 'cif':
             self.atom_renumbering()
@@ -141,7 +140,7 @@ class StructureManager():
             r.index = i
             self.all_residues.append(r)
             i += 1
-
+        
     def atom_renumbering(self):
         """Sets  Bio.PDB.Atom.serial_number for all atoms in the structure, overriding original if any
         """
