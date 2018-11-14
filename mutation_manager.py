@@ -138,8 +138,8 @@ class Mutation():
                     mu.rename_atom(r, old_at, new_at)
                 else:
                     print ('#WARNING: atom {} missing in {}'.format(old_at, mu.residue_id(r)))
+                    extra_adds.append(new_at)
                 in_rules.append(old_at)
-                extra_adds.append(new_at)
 
 # Deleting atoms
             for at_id in mut_map[rname][self.new_id][DEL]:
