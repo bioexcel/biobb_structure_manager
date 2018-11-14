@@ -148,10 +148,10 @@ def is_hetatm(r):
 def is_at_in_list(at, at_list, rname=None):
     if rname is None:
         rname = at.get_parent().get_resname().replace(' ', '')
-    if not rname in at_list:
-        return at.id in at_list['*']
-    else:
+    if rname in at_list:
         return at.id in at_list[rname] or at.id in at_list['*']
+    else:
+        return at.id in at_list['*']
 
 def has_ins_code(r):
     return r.id[2] != ' '
@@ -536,14 +536,14 @@ def calc_at_dist(at1, at2):
     """
     Calculates distance between two atoms
     """
-    return np.sqrt(calc_at_sq_dist(at1, at2)) #TODO look for a faster alternative
+    return np.sqrt(calc_at_sq_dist(at1, at2)) 
 
 def calc_at_sq_dist(at1, at2):
     """
     Calculates distance between two atoms
     """
     v = at1.coord-at2.coord
-    return dot(v, v)
+    return np.dot(v, v)
 
 def calc_bond_angle(at1, at2, at3):
     """
@@ -600,19 +600,16 @@ def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
         r_ids = r_ids.split(',')
     dist_mat = []
     r_list = []
-    d_cut2 = d_cutoff ** 2
+    check_ats=[]
+#    d_cut2 = d_cutoff ** 2
     for r in st.get_residues():
         if r.resname in r_ids or r_ids == ['all']:
             r_list.append(r)
-    for i in range(0, len(r_list)-1):
-        ati = r_list[i].child_list[0]
-        for j in range(i + 1, len(r_list)):
-            atj = r_list[j].child_list[0]
-            if not check_models or same_model(r_list[i],r_list[j]):
-#                print (atom_id(ati, True),atom_id(atj, True))
-                d = calc_at_sq_dist(ati, atj)
-                if d_cutoff > 0. and d < d_cut2:
-                    dist_mat.append ([r_list[i], r_list[j], d])
+            check_ats.append(r.child_list[0])
+    nbsearch = NeighborSearch(check_ats)
+
+    for at1, at2 in nbsearch.search_all(d_cutoff):
+        dist_mat.append ([at1.get_parent(), at2.get_parent(), at1-at2])
     return dist_mat
 
 def calc_RMSd_ats (ats1, ats2):
