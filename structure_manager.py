@@ -379,22 +379,40 @@ class StructureManager():
         """
         Prints selected components from structure headers
         """
-        if self.input_format== 'cif':
-            print (' PDB id: {}'.format(self.headers['_entry.id']))
-            print (' Title: {}'.format(self.headers['_struct.title']))
-            print (' Experimental method: {}'.format(self.headers['_exptl.method']))
-            print (' Keywords: {}'.format(self.headers['_struct_keywords.pdbx_keywords']))
-            if '_refine_hist.d_res_high' in self.headers:
-                print (' Resolution: {} A'.format(self.headers['_refine_hist.d_res_high']))
-        else:
-            print ('Title: {}'.format(self.headers['name']))
-            print ('Experimental method: {}'.format(self.headers['structure_method']))
-            if 'keywords' in self.headers:
-                print ('Keywords: {}'.format(self.headers['keywords']))
-            if 'resolution' in self.headers:
-                print ('Resolution: {} A'.format(self.headers['resolution']))
+        self.get_headers()
+        if 'entry_id'in self.meta:
+            print (' PDB id: {}'.format(self.meta['entry_id']))
+        print ('Title: {}'.format(self.meta['title']))
+        print ('Experimental method: {}'.format( self.meta['method']))
+        print ('Keywords: {}'.format(self.meta['keywords']))
+        if 'resolution' in self.meta:
+            print ('Resolution: {} A'.format(self.meta['resolution']))
         if self.biounit:
-            print ('Biounit no. {}'. format(self.biounit))
+            print ('Biounit no. {}'. format(meta['biounit']))
+
+    def get_headers(self):
+        """
+        Extract selected components from structure headers
+        """
+        self.meta={}
+        if self.input_format== 'cif':
+            self.meta['entry_id'] = self.headers['_entry.id']
+            self.meta['title']= self.headers['_struct.title']
+            self.meta['method']=self.headers['_exptl.method']
+            self.meta['keywords'] = self.headers['_struct_keywords.pdbx_keywords']
+            if '_refine_hist.d_res_high' in self.headers:
+                self.meta['resolution']=self.headers['_refine_hist.d_res_high']
+        else:
+            self.meta['title']= self.headers['name']
+            self.meta['method']= self.headers['structure_method']
+            if 'keywords' in self.headers:
+                self.meta['keywords']=self.headers['keywords']
+            if 'resolution' in self.headers:
+                self.meta['resolution'] = self.headers['resolution']
+        if self.biounit:
+            self.meta['biounit'] =self.biounit
+
+        
     def print_stats(self, prefix=''):
         """
         Prints statistics to stdout
