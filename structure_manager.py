@@ -25,8 +25,8 @@ class StructureManager():
             **input_pdb_path** (str): path to input structure either in pdb or
             mmCIF format. Format is taken from file extension.
             Alternatively **pdb:pdbId** fetches the mmCif file from RCSB
-            
-            **pdb_server** (str) : **default** for Bio.PDB defaults (RCSB), **mmb** for MMB PDB API 
+
+            **pdb_server** (str) : **default** for Bio.PDB defaults (RCSB), **mmb** for MMB PDB API
 
         Object structure:
             {
@@ -151,7 +151,7 @@ class StructureManager():
             if hasattr(at, 'selected_child'):
                 at.selected_child.serial_number = i
             i += 1
-            
+
     def guess_hetatm(self):
         """ Guesses HETATM type as modified res, metal, wat, organic
         """
@@ -162,15 +162,15 @@ class StructureManager():
             if not mu.is_hetatm(r):
                 continue
             if mu.is_wat(r):
-                self.hetatm[mu.WAT].append(r)                
+                self.hetatm[mu.WAT].append(r)
             elif len(r) == 1:
                 self.hetatm[mu.METAL].append(r)
             elif 'N' in r or 'C' in r: # modified aminoacid candidate, TODO check connectivity with n-1 or n+1
-                self.hetatm[mu.MODRES].append(r)            
+                self.hetatm[mu.MODRES].append(r)
             #TODO check modified nucleotides
             else:
-                self.hetatm[mu.ORGANIC].append(r)            
-                
+                self.hetatm[mu.ORGANIC].append(r)
+
     def calc_stats(self):
         """Calculates general statistics about the structure, and guesses whether
         it is a CA-only structure
@@ -412,7 +412,7 @@ class StructureManager():
         if self.biounit:
             self.meta['biounit'] =self.biounit
 
-        
+
     def print_stats(self, prefix=''):
         """
         Prints statistics to stdout
@@ -449,7 +449,7 @@ class StructureManager():
             print ('Small mol ligands found')
             for r in self.hetatm[mu.ORGANIC]:
                 print (mu.residue_id(r))
-            
+
 
     def get_structure(self):
         """
@@ -514,7 +514,7 @@ class StructureManager():
         Returns: Boolean
         """
         return self.nmodels>1
-    
+
     def is_biounit(self):
         """Shortcut to check whether the structure has been loaded from a biounit
         """
@@ -524,7 +524,9 @@ class StructureManager():
         Identifies and sets the chain ids, guessing its nature (protein, dna, rna, ...)
         """
         self.chain_ids = {}
-        for ch in self.st[0].get_chains():
+        for ch in self.st.get_chains():
+            if not self.biounit and ch.get_parent().id > 0:
+                continue
             self.chain_ids[ch.id] = mu.guess_chain_type(ch)
         self.chains_ids = sorted(self.chain_ids)
 
