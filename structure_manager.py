@@ -388,7 +388,7 @@ class StructureManager():
         if 'resolution' in self.meta:
             print ('Resolution: {} A'.format(self.meta['resolution']))
         if self.biounit:
-            print ('Biounit no. {}'. format(meta['biounit']))
+            print ('Biounit no. {}'. format(self.meta['biounit']))
 
     def get_headers(self):
         """
