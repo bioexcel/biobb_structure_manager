@@ -383,7 +383,8 @@ class StructureManager():
             print (' PDB id: {}'.format(self.meta['entry_id']))
         print ('Title: {}'.format(self.meta['title']))
         print ('Experimental method: {}'.format( self.meta['method']))
-        print ('Keywords: {}'.format(self.meta['keywords']))
+        if 'keywords' in self.meta:
+            print ('Keywords: {}'.format(self.meta['keywords']))
         if 'resolution' in self.meta:
             print ('Resolution: {} A'.format(self.meta['resolution']))
         if self.biounit:
