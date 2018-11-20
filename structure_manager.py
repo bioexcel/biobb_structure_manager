@@ -138,6 +138,9 @@ class StructureManager():
         self.all_residues=[]
         for r in self.st.get_residues():
             r.index = i
+            if type(r).__name__ == 'DisorderedResidue':
+                for ch_r in r.child_dict:
+                    r.child_dict[ch_r].index = i
             self.all_residues.append(r)
             i += 1
         
