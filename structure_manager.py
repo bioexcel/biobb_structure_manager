@@ -320,20 +320,22 @@ class StructureManager():
             beckbone_atoms: atoms to be considered as backbone
             COVLNK: Threshold distance for a covalent bond
         """
-        self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
+        if not hasattr(self,'backbone_links'):
+            self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
         self.residue_link_to = {}
         for lnk in self.backbone_links:
             [at1, at2] = lnk
             self.residue_link_to[at1.get_parent()]=at2.get_parent()
 
-    def check_cis_backbone(self, COVLNK):
+    def check_cis_backbone(self, COVLNK, check_models=True):
         """
         Determines omega dihedrals for two bound residues and classifies them
         as normal trans, low angle trans, and cis
 
         Args:
             backbone_atoms: atoms to be considered as backbone
-            COVLNK: Distance thresjold for a covalent bond
+            COVLNK: Distance threshold for a covalent bond
+            check_models: Consider models as independent molecules
 
         Internal parameters:
             CISTHRES (20): Max dihedral for cis bonds
@@ -384,14 +386,14 @@ class StructureManager():
         self.get_headers()
         if 'entry_id'in self.meta:
             print (' PDB id: {}'.format(self.meta['entry_id']))
-        print ('Title: {}'.format(self.meta['title']))
-        print ('Experimental method: {}'.format( self.meta['method']))
+        print (' Title: {}'.format(self.meta['title']))
+        print (' Experimental method: {}'.format( self.meta['method']))
         if 'keywords' in self.meta:
-            print ('Keywords: {}'.format(self.meta['keywords']))
+            print (' Keywords: {}'.format(self.meta['keywords']))
         if 'resolution' in self.meta:
-            print ('Resolution: {} A'.format(self.meta['resolution']))
+            print (' Resolution: {} A'.format(self.meta['resolution']))
         if self.biounit:
-            print ('Biounit no. {}'. format(self.meta['biounit']))
+            print (' Biounit no. {}'. format(self.meta['biounit']))
 
     def get_headers(self):
         """

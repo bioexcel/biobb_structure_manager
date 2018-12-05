@@ -359,19 +359,21 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
                             min_dist2[cls] = dist2
     return clash_list
 
-def get_backbone_links(st, backbone_atoms, COVLNK): #TODO differenciate Protein and NA
+def get_backbone_links(st, backbone_atoms, COVLNK, check_models=True): #TODO differenciate Protein and NA
     cov_links = []
     for m in st:
         bckats = []
         for at in st[m.id].get_atoms():
             if at.id in backbone_atoms:
-                bckats.append(at)
-
+                if at.disordered_flag:
+                    bckats.append(at.selected_child)
+                else:
+                    bckats.append(at)
         if bckats:
             nbsearch = NeighborSearch(bckats)
-
             for at1, at2 in nbsearch.search_all(COVLNK):
-                if not same_residue(at1, at2):
+                if not same_residue(at1, at2) \
+                   and (not check_models or same_model(at1.get_parent(),at2.get_parent())):
                     cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
             print ("Warning: No backbone atoms defined")
@@ -563,7 +565,10 @@ def calc_bond_dihedral(at1, at2, at3, at4):
     v = np.cross(db, cb)
     w = np.cross(u, v)
     angle_uv = _calc_v_angle(u, v)
-    angle_cbw = _calc_v_angle(cb, w)
+    if norm(w)== 0.:
+        angle_cbw = 0.
+    else:
+        angle_cbw = _calc_v_angle(cb, w)
     try:
         if angle_cbw > 0.001:
             angle_uv = -angle_uv
@@ -608,12 +613,13 @@ def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
     nbsearch = NeighborSearch(check_ats)
 
     for at1, at2 in nbsearch.search_all(d_cutoff):
-        dist_mat.append ([at1.get_parent(), at2.get_parent(), at1-at2])
+        if not check_models or same_model(at1.get_parent(),at2.get_parent()):
+            dist_mat.append ([at1.get_parent(), at2.get_parent(), at1-at2])        
     return dist_mat
 
 def calc_RMSd_ats (ats1, ats2):
     if len(ats1) != len(ats2):
-        print ("Warning: atom lists of different length when calculating RMSd", file=sys.stderr)
+        print ("Warning: atom lists of different length when calculating RMSd ({}, {})".format(len(ats1),len(ats2)), file=sys.stderr)
     rmsd = 0
     i = 0
     while i < len(ats1) and i < len(ats2):
