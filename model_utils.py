@@ -16,6 +16,7 @@ from numpy.linalg import norm
 import re
 import sys
 
+
 UNKNOWN = 0
 
 #chain types
@@ -304,6 +305,7 @@ def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True)
         clash_list[cls] = {}
     for r_pair in rr_list:
         [r1, r2, d] = r_pair
+
         if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
             c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model)
             rkey = residue_id(r1) + '-' + residue_id(r2)
@@ -313,24 +315,31 @@ def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True)
     return clash_list
 
 def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
-
     clash_list = {}
     min_dist2 = {}
     CLASH_DIST2 = {}
+    ats_list1 = {}
+    ats_list2 = {}
     for cls in atom_lists:
         clash_list[cls] = []
         min_dist2[cls] = 99999.
         CLASH_DIST2[cls] = CLASH_DIST[cls]**2
+        ats_list1[cls]=set()
+        ats_list2[cls]=set()
+    for at in r1.get_atoms():
+        for cls in atom_lists:
+            if is_at_in_list(at,atom_lists[cls], r1.get_resname()):
+                ats_list1[cls].add(at.id)
+    for at in r2.get_atoms():
+        for cls in atom_lists:
+            if is_at_in_list(at,atom_lists[cls], r2.get_resname()):
+                ats_list2[cls].add(at.id)
         
     if r1 != r2 and not seq_consecutive(r1, r2) \
                 and (in_model and same_model(r1, r2)):
         for at_pair in get_all_rr_distances(r1, r2):
             [at1, at2, dist2] = at_pair
-            r1 = at1.get_parent()
-            rname1 = r1.get_resname()
-            r2 = at2.get_parent()
-            rname2 = r2.get_resname()
-            if 'severe' in atom_lists and dist2 < CLASH_DIST['severe']**2:
+            if 'severe' in atom_lists and dist2 < CLASH_DIST2['severe']:
                 if dist2 < min_dist2:
                     clash_list['severe'] = at_pair
                     min_dist2['severe'] = dist2
@@ -338,8 +347,8 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
                 for cls in atom_lists:
                     if cls == 'apolar':
                         #Only one of the atoms should be apolar
-                        if not is_at_in_list(at1, atom_lists[cls], rname1) and \
-                           not is_at_in_list(at2, atom_lists[cls], rname2):
+                        if not at1.id in ats_list1[cls] and \
+                           not at2.id in ats_list2[cls]:
                             continue
                         #Remove n->n+2 backbone clashes. TODO Improve
                         if abs(r1.index - r2.index) <= 2:
@@ -350,8 +359,8 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
                            continue
                     else:
                         # Both atoms should be of the same kind
-                        if not is_at_in_list(at1, atom_lists[cls], rname1) or \
-                           not is_at_in_list(at2, atom_lists[cls], rname2):
+                        if not at1.id in ats_list1[cls] or \
+                           not at2.id in ats_list2[cls]:
                             continue
                     if dist2 < CLASH_DIST2[cls]:
                         if dist2 < min_dist2[cls]:
@@ -614,7 +623,7 @@ def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
 
     for at1, at2 in nbsearch.search_all(d_cutoff):
         if not check_models or same_model(at1.get_parent(),at2.get_parent()):
-            dist_mat.append ([at1.get_parent(), at2.get_parent(), at1-at2])        
+            dist_mat.append([at1.get_parent(), at2.get_parent(), at1-at2])        
     return dist_mat
 
 def calc_RMSd_ats (ats1, ats2):
@@ -649,10 +658,10 @@ def get_all_rr_distances(r1, r2, with_h=False):
             if at2.element == 'H' and not with_h:
                 continue
             d2 = calc_at_sq_dist(at1,at2)
-            if at1.serial_number < at2.serial_number:
-                dist_mat.append ([at1, at2, d2])
-            else:
-                dist_mat.append ([at2, at1, d2])
+#            if at1.serial_number < at2.serial_number:
+            dist_mat.append ([at1, at2, d2])
+#            else:
+#                dist_mat.append ([at2, at1, d2])
     return dist_mat
 
 def guess_models_type(st, threshold=MODELS_MAXRMS):
