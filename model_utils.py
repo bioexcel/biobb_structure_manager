@@ -165,8 +165,9 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     prot = 0.
     dna = 0.
     rna = 0.
-    total = 0
+    total = 0.
     for r in ch.get_residues():
+        total += 1
         if is_wat(r):
             continue
         rname = r.get_resname().replace(' ', '')
@@ -176,7 +177,6 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
             dna += 1
         elif rname in rna_residue_code:
             rna += 1
-        total += 1
     prot = prot / total
     dna = dna / total
     rna = rna / total
