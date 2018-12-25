@@ -12,6 +12,7 @@ from numpy import cos
 from numpy import dot
 from numpy import pi
 from numpy import sin
+from numpy import sqrt
 from numpy.linalg import norm
 import re
 import sys
@@ -299,7 +300,7 @@ def get_residues_with_H(st):
             resh_list.append({'r':r, 'n_h':has_h})
     return resh_list
 
-def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True):
+def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, join_models=True):
     clash_list = {'severe':{}}
     for cls in atom_lists:
         clash_list[cls] = {}
@@ -307,14 +308,14 @@ def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, in_model=True)
         [r1, r2, d] = r_pair
 
         if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
-            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model)
+            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models)
             rkey = residue_id(r1) + '-' + residue_id(r2)
             for cls in c_list:
                 if len(c_list[cls]):
                     clash_list[cls][rkey] = c_list[cls]
     return clash_list
 
-def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
+def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models=True):
     clash_list = {}
     min_dist2 = {}
     CLASH_DIST2 = {}
@@ -334,9 +335,9 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
         for cls in atom_lists:
             if is_at_in_list(at,atom_lists[cls], r2.get_resname()):
                 ats_list2[cls].add(at.id)
-        
+
     if r1 != r2 and not seq_consecutive(r1, r2) \
-                and (in_model and same_model(r1, r2)):
+                and (join_models or same_model(r1, r2)):
         for at_pair in get_all_rr_distances(r1, r2):
             [at1, at2, dist2] = at_pair
             if 'severe' in atom_lists and dist2 < CLASH_DIST2['severe']:
@@ -368,7 +369,7 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, in_model=True):
                             min_dist2[cls] = dist2
     return clash_list
 
-def get_backbone_links(st, backbone_atoms, COVLNK, check_models=True): #TODO differenciate Protein and NA
+def get_backbone_links(st, backbone_atoms, COVLNK, join_models=True): #TODO differenciate Protein and NA
     cov_links = []
     for m in st:
         bckats = []
@@ -382,7 +383,7 @@ def get_backbone_links(st, backbone_atoms, COVLNK, check_models=True): #TODO dif
             nbsearch = NeighborSearch(bckats)
             for at1, at2 in nbsearch.search_all(COVLNK):
                 if not same_residue(at1, at2) \
-                   and (not check_models or same_model(at1.get_parent(),at2.get_parent())):
+                   and (join_models or same_model(at1.get_parent(),at2.get_parent())):
                     cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
             print ("Warning: No backbone atoms defined")
@@ -546,7 +547,7 @@ def calc_at_dist(at1, at2):
     """
     Calculates distance between two atoms
     """
-    return np.sqrt(calc_at_sq_dist(at1, at2)) 
+    return np.sqrt(calc_at_sq_dist(at1, at2))
 
 def calc_at_sq_dist(at1, at2):
     """
@@ -585,7 +586,7 @@ def calc_bond_dihedral(at1, at2, at3, at4):
         pass
     return angle_uv
 
-def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
+def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., join_models=False):
     """
     Gets a list of all at-at distances below a cutoff, at ids can be limited
     """
@@ -594,37 +595,46 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., check_models=True):
 
     dist_mat = []
     at_list = []
-    d_cut2 = d_cutoff ** 2
+    d_cut2 = d_cutoff**2
     for at in st.get_atoms():
         if at.id in at_ids or at_ids == ['all']:
             at_list.append(at)
-    for i in range(0, len(at_list)-1):
+    for i in range(len(at_list)-1):
         for j in range(i + 1, len(at_list)):
-            if not check_models or same_model(at_list[i].get_parent(), at_list[j].get_parent()):
+            if join_models or same_model(at_list[i].get_parent(), at_list[j].get_parent()):
                 d = calc_at_sq_dist(at_list[i], at_list[j])
                 if d_cutoff > 0. and d < d_cut2:
                     dist_mat.append ([at_list[i], at_list[j], d])
     return dist_mat
 
 
-def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., check_models=True):
+def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., join_models=False):
     # Uses distances between the first atom of each residue as r-r distance
     if not isinstance(r_ids, list):
         r_ids = r_ids.split(',')
     dist_mat = []
-    r_list = []
-    check_ats=[]
-#    d_cut2 = d_cutoff ** 2
-    for r in st.get_residues():
-        if r.resname in r_ids or r_ids == ['all']:
-            r_list.append(r)
-            check_ats.append(r.child_list[0])
-    nbsearch = NeighborSearch(check_ats)
-
-    for at1, at2 in nbsearch.search_all(d_cutoff):
-        if not check_models or same_model(at1.get_parent(),at2.get_parent()):
-            dist_mat.append([at1.get_parent(), at2.get_parent(), at1-at2])        
+    check_ats={}
+    for md_id in range(len(st)):
+        check_ats[md_id]=[]
+        for r in st[md_id].get_residues():
+            if r.resname in r_ids or r_ids == ['all']:
+                if join_models:
+                    check_ats[0].append(r.child_list[0])
+                else:
+                    check_ats[md_id].append(r.child_list[0])
+    for md_id in range(len(st)):
+        if len(check_ats[md_id]):
+            dist_mat += _get_contacts(check_ats[md_id],d_cutoff)
     return dist_mat
+
+
+def _get_contacts(ats_list,d_cutoff):
+    contact_list=[]
+    nbsearch = NeighborSearch(ats_list)
+    for at1, at2 in nbsearch.search_all(d_cutoff):
+        contact_list.append([at1.get_parent(), at2.get_parent(), at1-at2])
+    return contact_list
+
 
 def calc_RMSd_ats (ats1, ats2):
     if len(ats1) != len(ats2):
@@ -636,7 +646,7 @@ def calc_RMSd_ats (ats1, ats2):
         rmsd = rmsd + d2
         i = i + 1
 
-    return (math.sqrt(rmsd / i))
+    return (sqrt(rmsd / i))
 
 def calc_RMSd_all_ats (st1, st2):
     ats1 = []

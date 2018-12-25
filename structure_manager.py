@@ -143,7 +143,7 @@ class StructureManager():
                     r.child_dict[ch_r].index = i
             self.all_residues.append(r)
             i += 1
-        
+
     def atom_renumbering(self):
         """Sets  Bio.PDB.Atom.serial_number for all atoms in the structure, overriding original if any
         """
@@ -368,6 +368,7 @@ class StructureManager():
         """
         return {
             'nmodels': self.nmodels,
+            'models_type': self.models_type,
             'nchains': len(self.chain_ids),
             'chain_ids': self.chain_ids,
             'num_res': self.num_res,
@@ -426,7 +427,10 @@ class StructureManager():
             prefix: Text prefix to prepend to printed data
         """
         stats = self.get_stats()
-        print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
+        if stats['nmodels'] > 1:
+            print ('{} Num. models: {} (type: {}, {:8.3f} A)'.format(prefix, stats['nmodels'],mu.model_type_labels[stats['models_type']['type']],stats['models_type']['rmsd']))
+        else:
+            print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         chids=[]
         for ch_id in sorted(stats['chain_ids']):
             if isinstance(stats['chain_ids'][ch_id],list):
@@ -519,6 +523,14 @@ class StructureManager():
         Returns: Boolean
         """
         return self.nmodels>1
+
+    def has_superimp_models(self):
+        """
+        Shotcut method to check whether the structure has superimposed models (i.e. NMR or ensemble)
+
+        Returns: Boolean
+        """
+        return self.models_type and self.models_type['type']==mu.ENSM
 
     def is_biounit(self):
         """Shortcut to check whether the structure has been loaded from a biounit
