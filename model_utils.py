@@ -678,6 +678,7 @@ def guess_models_type(st, threshold=MODELS_MAXRMS):
     if len(st) == 1:
         return 0
     rmsd = calc_RMSd_all_ats(st[0], st[1])
+    rmsd = round(rmsd,4)
     if len(st) > 1:
         if rmsd < threshold:
             return {'type':ENSM, 'rmsd':rmsd}
