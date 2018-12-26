@@ -113,7 +113,7 @@ class StructureManager():
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
     #Atom renumbering for mmCIF, PDB uses atom number in file
-        if self.input_format == 'cif':
+        if self.input_format == 'cif' or self.biounit:
             self.atom_renumbering()
 
     #checking models type according to RMS among models
@@ -428,7 +428,12 @@ class StructureManager():
         """
         stats = self.get_stats()
         if stats['nmodels'] > 1:
-            print ('{} Num. models: {} (type: {}, {:8.3f} A)'.format(prefix, stats['nmodels'],mu.model_type_labels[stats['models_type']['type']],stats['models_type']['rmsd']))
+            print ('{} Num. models: {} (type: {}, {:8.3f} A)'.format(
+                prefix, 
+                stats['nmodels'],
+                mu.model_type_labels[stats['models_type']['type']],
+                stats['models_type']['rmsd'])
+            )
         else:
             print ('{} Num. models: {}'.format(prefix, stats['nmodels']))
         chids=[]
