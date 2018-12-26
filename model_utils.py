@@ -222,7 +222,7 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
     for at in [at1, at2, at3, at4]:
         at_ok = at_ok and at in r
         if not at_ok:
-            print ('Warning: atom {} not found in {}'.format(at, residue_id(r)))
+            print ('Warning: atom {:3} not found in {}'.format(at, residue_id(r)))
     if at_ok:
         v1 = r[at1].coord-r[at2].coord
         v2 = r[at3].coord-r[at2].coord

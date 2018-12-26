@@ -636,6 +636,6 @@ class StructureManager():
                 0,
                 at_id[0:1]
                 ))
-
+        self.atom_renumbering()
         self.modified=True
 
