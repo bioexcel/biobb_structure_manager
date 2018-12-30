@@ -17,7 +17,6 @@ from numpy.linalg import norm
 import re
 import sys
 
-
 UNKNOWN = 0
 
 #chain types
@@ -32,7 +31,7 @@ chain_type_labels = {PROTEIN:'Protein', DNA:'DNA', RNA:'RNA', UNKNOWN:'Unknown'}
 ENSM = 1
 BUNIT = 2
 MODELS_MAXRMS = 15.0    # Threshold value to detect NMR models (angs)
-model_type_labels = {ENSM:'Ensembl', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
+model_type_labels = {ENSM:'Ensembl/NMR', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
 
 #HetAtm Types
 MODRES = 1
@@ -61,7 +60,7 @@ rna_residue_code = ['A', 'C', 'G', 'U']
 na_residue_code = dna_residue_code + rna_residue_code
 
 
-# Residue ids
+# Residue & Atom friendly ids
 
 def residue_id(r, models='auto'):
     """
@@ -148,6 +147,8 @@ def is_hetatm(r):
     return r.id[0][0:2] == 'H_' or 'W' == r.id[0]
 
 def is_at_in_list(at, at_list, rname=None):
+    """Checks if **at is in **at_list in the context of **rname residue
+    """
     if rname is None:
         rname = at.get_parent().get_resname().replace(' ', '')
     if rname in at_list:
@@ -156,7 +157,28 @@ def is_at_in_list(at, at_list, rname=None):
         return at.id in at_list['*']
 
 def has_ins_code(r):
+    """Checks whether residue **r has insertion code
+    """
     return r.id[2] != ' '
+
+#===============================================================================
+# Guesses
+
+def guess_models_type(st, threshold=MODELS_MAXRMS):
+    """Guesses the type of models according to all atom RMSd of first 2 models
+       Considers Ensembl/NMR if rmsd value is less than **threshold
+    """
+    if len(st) == 1:
+        return 0
+    rmsd = calc_RMSd_all_ats(st[0], st[1])
+    rmsd = round(rmsd,4)
+    if len(st) > 1:
+        if rmsd < threshold:
+            return {'type':ENSM, 'rmsd':rmsd}
+        else:
+            return {'type':BUNIT, 'rmsd':rmsd}
+    else:
+        return {'type':UNKNOWN, 'rmsd':rmsd}
 
 def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     """
@@ -191,6 +213,8 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
         return RNA
     else:
         return [prot, dna, rna, other]
+    
+#===============================================================================
 
 def check_chiral_residue(r, chiral_data):
     """
@@ -231,12 +255,6 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
         chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
     return chi_ok
 
-def invert_chirality (r, at1, at2, at3, at4):
-    """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
-    """
-    #TODO
-    pass
-
 def check_all_at_in_r(r, at_list):
     miss_at = {}
     for group in ['backbone', 'side']:
@@ -248,57 +266,6 @@ def check_all_at_in_r(r, at_list):
         return miss_at
     else:
         return {}
-
-def get_altloc_residues(st):
-    """ Gets list of residue  with atoms with alternative location labels
-    """
-    res_list = {}
-    for r in st.get_residues():
-        for at in r.get_atoms():
-#        r = at.get_parent()
-           if at.get_altloc() != ' ':
-                if r not in res_list:
-                    res_list[r] = []
-                res_list[r].append(at)
-    return res_list
-
-def get_metal_atoms(st, metal_ats):
-    """
-    Gets list of metal atoms
-
-    """
-    met_list = []
-    for at in st.get_atoms():
-        if not re.match('H_', at.get_parent().id[0]):
-            continue
-        if at.id in metal_ats:
-            met_list.append(at)
-    return met_list
-
-def get_ligands(st, incl_water=False):
-    """
-    Gets lists of ligands, water molecules can be excluded
-    """
-    lig_list = []
-    for r in st.get_residues():
-        if re.match('H_', r.id[0]) or (incl_water and re.match('W', r.id[0])):
-            lig_list.append(r)
-    return lig_list
-
-def get_residues_with_H(st):
-    """
-    Get residues containint Hydrogen atoms
-
-    """
-    resh_list = []
-    for r in st.get_residues():
-        has_h = 0
-        for a in r.get_atoms():
-            if a.element == 'H':
-                has_h += 1
-        if has_h:
-            resh_list.append({'r':r, 'n_h':has_h})
-    return resh_list
 
 def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, join_models=True):
     clash_list = {'severe':{}}
@@ -368,6 +335,59 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models=True):
                             clash_list[cls] = at_pair
                             min_dist2[cls] = dist2
     return clash_list
+
+#===============================================================================
+def get_altloc_residues(st):
+    """ Gets list of residue  with atoms with alternative location labels
+    """
+    res_list = {}
+    for r in st.get_residues():
+        for at in r.get_atoms():
+#        r = at.get_parent()
+           if at.get_altloc() != ' ':
+                if r not in res_list:
+                    res_list[r] = []
+                res_list[r].append(at)
+    return res_list
+
+def get_metal_atoms(st, metal_ats):
+    """
+    Gets list of metal atoms
+
+    """
+    met_list = []
+    for at in st.get_atoms():
+        if not re.match('H_', at.get_parent().id[0]):
+            continue
+        if at.id in metal_ats:
+            met_list.append(at)
+    return met_list
+
+def get_ligands(st, incl_water=False):
+    """
+    Gets lists of ligands, water molecules can be excluded
+    """
+    lig_list = []
+    for r in st.get_residues():
+        if re.match('H_', r.id[0]) or (incl_water and re.match('W', r.id[0])):
+            lig_list.append(r)
+    return lig_list
+
+def get_residues_with_H(st):
+    """
+    Get residues containint Hydrogen atoms
+
+    """
+    resh_list = []
+    for r in st.get_residues():
+        has_h = 0
+        for a in r.get_atoms():
+            if a.element == 'H':
+                has_h += 1
+        if has_h:
+            resh_list.append({'r':r, 'n_h':has_h})
+    return resh_list
+
 
 def get_backbone_links(st, backbone_atoms, COVLNK, join_models=True): #TODO differenciate Protein and NA
     cov_links = []
@@ -441,6 +461,12 @@ def invert_side_atoms(r, res_data): #TODO check merging with swat_atom_names
     if not res_type in res_data:
         sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
     swap_atoms(r[res_data[res_type][0]], r[res_data[res_type][1]])
+
+def invert_chirality (r, at1, at2, at3, at4):
+    """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
+    """
+    #TODO
+    pass
 
 def invert_chiral_ca(r):
     """
@@ -674,18 +700,6 @@ def get_all_rr_distances(r1, r2, with_h=False):
 #                dist_mat.append ([at2, at1, d2])
     return dist_mat
 
-def guess_models_type(st, threshold=MODELS_MAXRMS):
-    if len(st) == 1:
-        return 0
-    rmsd = calc_RMSd_all_ats(st[0], st[1])
-    rmsd = round(rmsd,4)
-    if len(st) > 1:
-        if rmsd < threshold:
-            return {'type':ENSM, 'rmsd':rmsd}
-        else:
-            return {'type':BUNIT, 'rmsd':rmsd}
-    else:
-        return {'type':UNKNOWN, 'rmsd':rmsd}
 
 #===============================================================================
 def _calc_v_angle(v1, v2, deg=True):
