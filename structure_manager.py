@@ -2,6 +2,7 @@
 """
 import sys
 import warnings
+import os
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
@@ -17,14 +18,14 @@ class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
 
-    def __init__(self, input_pdb_path, pdb_server='ftp://ftp.wwpdb.org', cache_dir='tmpPDB'):
+    def __init__(self, input_pdb_path, pdb_server='ftp://ftp.wwpdb.org', cache_dir='tmpPDB', file_format='mmCif'):
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
         Args:
             **input_pdb_path** (str): path to input structure either in pdb or
             mmCIF format. Format is taken from file extension.
-            Alternatively **pdb:pdbId** fetches the mmCif file from RCSB
+            Alternatively **pdb:pdbId** fetches the mmCIF file from RCSB
 
             **pdb_server** (str) : **default** for Bio.PDB defaults (RCSB), **mmb** for MMB PDB API
 
@@ -67,6 +68,7 @@ class StructureManager():
         self.modified = False
         self.all_residues = []
         self.biounit=False
+        self.file_format=file_format
         if "pdb:"in input_pdb_path:
             pdbl = MMBPDBList(pdb=cache_dir, server=pdb_server) # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             try:
@@ -80,16 +82,17 @@ class StructureManager():
                     self.biounit=biounit
                 else:
                     input_pdb_path = input_pdb_path[4:].upper()
-                    real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format='mmCif')
-                parser = MMCIFParser()
-                self.input_format = 'cif'
-
+                    real_pdb_path = pdbl.retrieve_pdb_file(input_pdb_path, file_format=self.file_format)
+                    if file_format=='pdb': # change file name to id.pdb
+                        os.rename(real_pdb_path,input_pdb_path+".pdb")
+                        real_pdb_path = input_pdb_path + ".pdb"
             except IOError:
                 sys.stderr.write("ERROR: fetching structure at {}\n".format(input_pdb_path))
 #                print ('ERROR: fetching structure at {}'.format(input_pdb_path), file=sys.stderr)
                 sys.exit(2)
         else:
             real_pdb_path = input_pdb_path
+
         if '.pdb' in real_pdb_path:
             parser = PDBParser(PERMISSIVE=1)
             self.input_format = 'pdb'
@@ -429,7 +432,7 @@ class StructureManager():
         stats = self.get_stats()
         if stats['nmodels'] > 1:
             print ('{} Num. models: {} (type: {}, {:8.3f} A)'.format(
-                prefix, 
+                prefix,
                 stats['nmodels'],
                 mu.model_type_labels[stats['models_type']['type']],
                 stats['models_type']['rmsd'])
