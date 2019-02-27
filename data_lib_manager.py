@@ -15,6 +15,8 @@ class DataLibManager():
             self.atom_data = json_map['data_library']['atom_data']
             self.residue_data = json_map['data_library']['residue_data']
             self.distances = json_map['data_library']['distances']
+            self.ion_res = json_map['data_library']['addH_check_residues']
+            self.std_ion = json_map['data_library']['addH_std_ion']
 
         except IOError:
             print ("ERROR: unable to open data library "+ file_path, file=sys.stderr)
@@ -81,3 +83,14 @@ class DataLibManager():
                 mut_rules[rcode]=self.residue_data[rcode]['mutation_rules']
                 mut_rules[rcode]['side_atoms'] = self.residue_data[rcode]['side_atoms']
         return(mut_rules)
+
+    def get_hydrogen_atoms(self):
+        h_atom_list={}
+        for rcode in self.residue_data:
+            if 'hydrogen_atoms' in self.residue_data[rcode]:
+                h_atom_list[rcode]=self.residue_data[rcode]['hydrogen_atoms']
+        return h_atom_list
+
+    def get_ion_data(self):
+        return self.std_ion
+        
