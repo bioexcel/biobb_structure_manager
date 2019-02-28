@@ -665,7 +665,7 @@ class StructureManager():
         self.atom_renumbering()
         self.modified=True
 
-    def add_hydrogens(self,r_at_list, hydrogens_list, res_library, remove_H=True):
+    def add_hydrogens(self,r_at_list, hydrogens_list, res_library, backbone_atoms, COVLNK, remove_H=True):
         """
         Add hydrogens according to selection in r_at_list
         
@@ -681,25 +681,82 @@ class StructureManager():
 
         for r_at in r_at_list:
             [r,opt] = r_at
+            if mu.is_hetatm(r):
+                continue
             rcode=r.get_resname()
             self.add_hydrogens_side(r, hydrogens_list[rcode][opt],res_library)
             r.resname=opt
             done_side.add(r)
+
+        if not hasattr(self,'backbone_links'):
+            self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
+        
+        prev_residue={}
+        for at_pair in self.backbone_links:
+            [at1,at2]=at_pair
+            prev_residue[at2.get_parent()]=at1.get_parent()
             
         for r in self.all_residues:
+            if mu.is_hetatm(r):
+                continue
             rcode=r.get_resname()
-            self.add_hydrogens_backbone(r,res_library)
+            if not r in prev_residue:
+                prev_residue[r]=None
+            self.add_hydrogens_backbone(r, prev_residue[r], res_library)
+                
             if r not in done_side and rcode != 'GLY':
                 self.add_hydrogens_side(r,hydrogens_list[rcode],res_library)
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified=True
             
-    def add_hydrogens_backbone(self, r, res_library):
-        pass
+    def add_hydrogens_backbone(self, r, r_1, res_library):
+        if r_1 == None:
+            # Nterminal
+            crds = mu.buildCoords3xSP3(1.010, r['N'], r['CA'], r['C'])
+            i=0
+            for at_id in ['H1','H2','H3']:
+                r.add(Atom(
+                    at_id,
+                    crds[i],
+                    99.0, 1.0, ' ', ' '+at_id+' ', 0, 'H'
+                ))
+                i += 1
+        else:
+            r.add(Atom(
+                'H',
+                mu.buildCoordsSP2(1.08, r['N'],r['CA'],r_1['C']),
+                99.0, 1.0,' ', ' H ', 0, 'H'
+            ))
+        
+        if r.get_resname() == 'GLY':
+#            for at_id in ['HA2','HA3']:
+#                print ("  Adding new atom ", at_id," on ",mu.residue_id(r))
+#                r.add(Atom(
+#                    at_id,
+#                    mu.buildCoordsOther(r, res_library, r.get_resname(), at_id),
+#                    99.0, 1.0, ' ', ' ' + at_id + ' ', 0, 'H'
+#                ))
+            crs = mu.buildCoords2xSP3(1.010, r['CA'],r['N'],r['C'])
+            i=0
+            for at_id in ['HA2','HA3']:
+                r.add(Atom(
+                    at_id,
+                    crs[i],
+                    99.0, 1.0, ' ', ' ' + at_id + ' ', 0, 'H'
+                ))
+                i +=1
+                
+        else:
+            print ("  Adding new atom HA  on ",mu.residue_id(r))
+            r.add(Atom(
+                'HA',
+                mu.buildCoordsSP3(1.08,r['CA'],r['N'],r['C'],r['CB']),
+                99.0, 1.0, ' ', ' HA ', 0, 'H'
+            ))
+                
     
     def add_hydrogens_side(self, r, at_list, res_library):
-        
         for at_id in at_list:
             print ("  Adding new atom " + at_id + " on " + mu.residue_id(r))
             coords = mu.buildCoordsOther(r, res_library, r.get_resname(), at_id)
