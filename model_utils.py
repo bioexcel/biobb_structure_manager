@@ -514,6 +514,8 @@ def buildCoordsOther(r, res_lib, new_res, at_id):
 
     """
     resid_def = res_lib.residues[new_res]
+    print (new_res)
+    print (resid_def)
     i = 1
     while resid_def.ats[i].id != at_id and i < len(resid_def.ats):
         i = i + 1
@@ -542,30 +544,47 @@ def buildCoordsCB(r): # Get CB from Backbone
 
     
 def buildCoords3xSP3(dst,at,at1,at2):
+    """
+        Generates coordinates for 3 SP3 atoms
+        **dst** bond distance
+        **at**  central atom
+        **at1** atom to define bond angles
+        **at2** atom to define dihedrals
+    """
+    #TODO try a pure geometrical generation to avoid at2
     dihs = [60.0,180.0,300.0]
-    crd=[]
+    crs=[]
     for i in range(0,3):
-        print (i, dihs[i])
-        crd.append(buildCoords(
+        crs.append(buildCoords(
                     at.get_coord(),
                     at1.get_coord(),
                     at2.get_coord(),
                     [dst,109.470,dihs[i]])
-                    )
-    return crd
+        )
+    return crs
     
 def buildCoords2xSP3(dst,at,at1,at2):
+    """
+        Generates coordinates for two SP3 bonds given the other two
+        **dst** Bond distance
+        **at** Central atom
+        **at1** atom with existing bond
+        **at2** atom with existing bond
+    """
     cr0 = Vector(at.get_coord())
     cr1 = Vector(at1.get_coord())
     cr2 = Vector(at2.get_coord())
     axe = cr0-cr1
     m = rotaxis(120.*pi/180., axe)
     bond = cr2-cr0
-    cr3 = cr0+bond.left_multiply(m)
-    cr4 = cr0+bond.left_multiply(m).left_multiply(m)
-    print (at.get_coord())
-    print (cr3._ar)
-    return [cr3._ar,cr4._ar]
+    bond.normalize()
+    bond._ar= bond._ar * dst
+    cr3=cr0+bond.left_multiply(m)
+    cr4=cr0+bond.left_multiply(m).left_multiply(m)
+    crs=[]
+    crs.append(cr3._ar)
+    crs.append(cr4._ar)
+    return crs
     
 def buildCoordsSP3(dst, at, at1, at2, at3):
     """
