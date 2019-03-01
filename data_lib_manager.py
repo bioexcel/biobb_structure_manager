@@ -93,4 +93,11 @@ class DataLibManager():
 
     def get_ion_data(self):
         return self.std_ion
+    
+    def get_addH_rules(self):
+        rules_list={}
+        for rcode in self.residue_data:
+            if 'addH_rules' in self.residue_data[rcode]:
+                rules_list[rcode]=self.residue_data[rcode]['addH_rules']
+        return rules_list
         

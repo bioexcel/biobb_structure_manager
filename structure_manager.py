@@ -665,7 +665,7 @@ class StructureManager():
         self.atom_renumbering()
         self.modified=True
 
-    def add_hydrogens(self,r_at_list, hydrogens_list, res_library, backbone_atoms, COVLNK, remove_H=True):
+    def add_hydrogens(self,r_at_list, hydrogens_list, res_library, backbone_atoms, COVLNK, addH_rules, remove_H=True):
         """
         Add hydrogens according to selection in r_at_list
         
@@ -684,7 +684,7 @@ class StructureManager():
             if mu.is_hetatm(r):
                 continue
             rcode=r.get_resname()
-            self.add_hydrogens_side(r, hydrogens_list[rcode][opt],res_library)
+            self.add_hydrogens_side(r, hydrogens_list[rcode][opt],res_library,addH_rules)
             r.resname=opt
             done_side.add(r)
 
@@ -705,7 +705,7 @@ class StructureManager():
             self.add_hydrogens_backbone(r, prev_residue[r], res_library)
                 
             if r not in done_side and rcode != 'GLY':
-                self.add_hydrogens_side(r,hydrogens_list[rcode],res_library)
+                self.add_hydrogens_side(r,hydrogens_list[rcode],res_library,addH_rules)
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified=True
@@ -730,13 +730,6 @@ class StructureManager():
             ))
         
         if r.get_resname() == 'GLY':
-#            for at_id in ['HA2','HA3']:
-#                print ("  Adding new atom ", at_id," on ",mu.residue_id(r))
-#                r.add(Atom(
-#                    at_id,
-#                    mu.buildCoordsOther(r, res_library, r.get_resname(), at_id),
-#                    99.0, 1.0, ' ', ' ' + at_id + ' ', 0, 'H'
-#                ))
             crs = mu.buildCoords2xSP3(1.010, r['CA'],r['N'],r['C'])
             i=0
             for at_id in ['HA2','HA3']:
@@ -756,17 +749,47 @@ class StructureManager():
             ))
                 
     
-    def add_hydrogens_side(self, r, at_list, res_library):
-        for at_id in at_list:
-            print ("  Adding new atom " + at_id + " on " + mu.residue_id(r))
-            coords = mu.buildCoordsOther(r, res_library, r.get_resname(), at_id)
-            r.add(Atom(
-                at_id,
-                coords,
-                99.0,
-                1.0,
-                ' ',
-                ' ' + at_id + ' ',
-                0,
-                at_id[0:1]
-                ))
+    def add_hydrogens_side(self, r, at_list, res_library, rules):
+        rcode=r.get_resname()
+        for kr in rules[rcode].keys():
+            rule=rules[rcode][kr]
+            if rule['mode'] == 'B2':
+                crs= mu.buildCoords2xSP3(
+                    1.010,
+                    r[kr],
+                    r[rule['ref_ats'][0]],
+                    r[rule['ref_ats'][1]]
+                )
+                i=0
+                for at_id in rule['ats']:
+                    r.add(Atom(at_id,crs[i],99.0, 1.0, ' ', ' '+at_id+' ', 0, 'H'))   
+                    i += 1
+            elif rule['mode'] == "B1":
+                crs = mu.buildCoordsSP3(
+                    1.010,
+                    r[kr],
+                    r[rule['ref_ats'][0]],
+                    r[rule['ref_ats'][1]],
+                    r[rule['ref_ats'][2]]
+                )
+                i=0
+                for at_id in rule['ats']:
+                    r.add(Atom(at_id,crs[i],99.0, 1.0, ' ', ' '+at_id+' ', 0, 'H'))   
+                    i += 1
+            elif rule['mode'] == 'S2':
+                crs = mu.buildCoordsSP2(
+                    1.010,
+                    r[kr],
+                    r[rule['ref_ats'][0]],
+                    r[rule['ref_ats'][1]],
+                )
+                i=0
+                for at_id in rule['ats']:
+                    r.add(Atom(at_id,crs[i],99.0, 1.0, ' ', ' '+at_id+' ', 0, 'H'))   
+                    i += 1
+            elif rule['mode'] == 'L':
+                print (rcode,rule)
+                for at_id in rule['ats']:
+                    crs = mu.buildCoordsOther(r, res_library, rcode, at_id)
+                    r.add(Atom(at_id,crs,99.0, 1.0,' ',' ' + at_id + ' ',0,'H'))
+                

@@ -4,7 +4,7 @@
 
 from Bio.PDB.Atom import Atom
 from Bio.PDB.NeighborSearch import NeighborSearch
-
+from Bio.PDB.vectors import Vector,rotaxis
 import math
 import numpy as np
 from numpy import arccos
@@ -555,16 +555,17 @@ def buildCoords3xSP3(dst,at,at1,at2):
     return crd
     
 def buildCoords2xSP3(dst,at,at1,at2):
-    #TODO
-    cr0 =at.get_coord()
-    cr1 =at1.get_coord()
-    cr2 =at2.get_coord()
+    cr0 = Vector(at.get_coord())
+    cr1 = Vector(at1.get_coord())
+    cr2 = Vector(at2.get_coord())
     axe = cr0-cr1
-    m = _rotaxis(120.*pi/180.,axe)
-    cr3 = _left_multiply(cr2,m)
-    cr4 = _left_multiply(cr3,m)
-    
-    return [cr3,cr4]    
+    m = rotaxis(120.*pi/180., axe)
+    bond = cr2-cr0
+    cr3 = cr0+bond.left_multiply(m)
+    cr4 = cr0+bond.left_multiply(m).left_multiply(m)
+    print (at.get_coord())
+    print (cr3._ar)
+    return [cr3._ar,cr4._ar]
     
 def buildCoordsSP3(dst, at, at1, at2, at3):
     """
