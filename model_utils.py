@@ -488,6 +488,7 @@ def rename_atom(r, old_at, new_at):
 def delete_atom(r, at_id):
     r.detach_child(at_id)
 
+
 def build_atom(r, at_id, res_lib, new_res_id):
     if at_id == 'CB':
         coords = buildCoordsCB(r)

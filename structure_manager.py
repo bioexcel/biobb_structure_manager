@@ -254,6 +254,24 @@ class StructureManager():
                 miss_side.append([r,at_list['side']])
         return miss_side
 
+    def get_ion_res_list(self, ion_res, hydrogen_lists):
+        """
+            returns list of residues with potencial selection on adding H
+
+            Args:
+                **ion_res**: list of residue codes with potential selection
+                **hydrogen_lists**: hydrogen atom names from residue library
+            Returns:
+                List of residues that require selection on adding H
+                ["r",[atom_list]]
+        """
+        ion_res_list = []
+        for res in self.all_residues:
+            rcode=res.get_resname()
+            if rcode in ion_res:
+                ion_res_list.append([res,hydrogen_lists[rcode]])
+        return ion_res_list
+
     def get_missing_backbone_atoms(self, valid_codes, residue_data):
         """
             returns list of residues with missing backbone atoms
@@ -647,3 +665,51 @@ class StructureManager():
         self.atom_renumbering()
         self.modified=True
 
+    def add_hydrogens(self,r_at_list, hydrogens_list, res_library, remove_H=True):
+        """
+        Add hydrogens according to selection in r_at_list
+        
+        Args:
+           **r_at_list**: tuple as [Bio.PDB.Residue, Tauromeric Option]
+           **hydrogens_list**: Hydrogen atom names per residue type
+        """
+        done_side = set()
+        
+        if remove_H:
+            for r in self.all_residues:
+                mu.remove_H_from_r (r, verbose=False)
+
+        for r_at in r_at_list:
+            [r,opt] = r_at
+            rcode=r.get_resname()
+            self.add_hydrogens_side(r, hydrogens_list[rcode][opt],res_library)
+            r.resname=opt
+            done_side.add(r)
+            
+        for r in self.all_residues:
+            rcode=r.get_resname()
+            self.add_hydrogens_backbone(r,res_library)
+            if r not in done_side and rcode != 'GLY':
+                self.add_hydrogens_side(r,hydrogens_list[rcode],res_library)
+        self.residue_renumbering()
+        self.atom_renumbering()
+        self.modified=True
+            
+    def add_hydrogens_backbone(self, r, res_library):
+        pass
+    
+    def add_hydrogens_side(self, r, at_list, res_library):
+        
+        for at_id in at_list:
+            print ("  Adding new atom " + at_id + " on " + mu.residue_id(r))
+            coords = mu.buildCoordsOther(r, res_library, r.get_resname(), at_id)
+            r.add(Atom(
+                at_id,
+                coords,
+                99.0,
+                1.0,
+                ' ',
+                ' ' + at_id + ' ',
+                0,
+                at_id[0:1]
+                ))
