@@ -213,7 +213,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
         return RNA
     else:
         return [prot, dna, rna, other]
-    
+
 #===============================================================================
 
 def check_chiral_residue(r, chiral_data):
