@@ -4,6 +4,7 @@
 
 from Bio.PDB.Atom import Atom
 from Bio.PDB.NeighborSearch import NeighborSearch
+from Bio.PDB.vectors import Vector,rotaxis
 import math
 import numpy as np
 from numpy import arccos
@@ -539,6 +540,81 @@ def buildCoordsCB(r): # Get CB from Backbone
                        [1.5, 115.5, -123.]
                        )
 
+
+def buildCoords3xSP3(dst,at,at1,at2):
+    """
+        Generates coordinates for 3 SP3 atoms
+        **dst** bond distance
+        **at**  central atom
+        **at1** atom to define bond angles
+        **at2** atom to define dihedrals
+    """
+    #TODO try a pure geometrical generation to avoid at2
+    dihs = [60.0,180.0,300.0]
+    crs=[]
+    for i in range(0,3):
+        crs.append(buildCoords(
+                    at.get_coord(),
+                    at1.get_coord(),
+                    at2.get_coord(),
+                    [dst,109.470,dihs[i]])
+        )
+    return crs
+
+def buildCoords2xSP3(dst,at,at1,at2):
+    """
+        Generates coordinates for two SP3 bonds given the other two
+        **dst** Bond distance
+        **at** Central atom
+        **at1** atom with existing bond
+        **at2** atom with existing bond
+    """
+    cr0 = Vector(at.get_coord())
+    cr1 = Vector(at1.get_coord())
+    cr2 = Vector(at2.get_coord())
+    axe = cr0-cr1
+    m = rotaxis(120.*pi/180., axe)
+    bond = cr2-cr0
+    bond.normalize()
+    bond._ar= bond._ar * dst
+    cr3=cr0+bond.left_multiply(m)
+    cr4=cr0+bond.left_multiply(m).left_multiply(m)
+    crs=[]
+    crs.append(cr3._ar)
+    crs.append(cr4._ar)
+    return crs
+
+def buildCoordsSP3(dst, at, at1, at2, at3):
+    """
+      Calculated cartesian coordinates to complete a SP3 group
+    """
+    cr0=at.get_coord()
+    cr1=at1.get_coord()
+    cr2=at2.get_coord()
+    cr3=at3.get_coord()
+    avg = cr1 + cr2
+    avg = avg + cr3
+    avg /= 3.
+    avec = cr0 - avg
+    avec /= norm(avec)
+    avec *= dst
+    return cr0 + avec
+
+def buildCoordsSP2(dst, at, at1, at2):
+    """
+      Calculates cartesian coordinaties to complete a SP2 group
+    """
+    cr0 = at.get_coord()
+    cr1 = at1.get_coord()
+    cr2 = at2.get_coord()
+
+    avg = cr1 + cr2
+    avg /= 2.
+    avec = cr0 - avg
+    avec /= norm(avec)
+    avec *= dst
+    return cr0 + avec
+
 def buildCoords(avec, bvec, cvec, geom):
     """
      Calculates cartesian coordinates for a new atom from internal coordinates.
@@ -708,3 +784,4 @@ def _calc_v_angle(v1, v2, deg=True):
     if deg:
         angle *= 180./pi
     return angle
+
