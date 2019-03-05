@@ -668,13 +668,13 @@ class StructureManager():
     def add_hydrogens(self,r_at_list, hydrogens_list, res_library, backbone_atoms, COVLNK, addH_rules, remove_H=True):
         """
         Add hydrogens according to selection in r_at_list
-        
+
         Args:
            **r_at_list**: tuple as [Bio.PDB.Residue, Tauromeric Option]
            **hydrogens_list**: Hydrogen atom names per residue type
         """
         done_side = set()
-        
+
         if remove_H:
             for r in self.all_residues:
                 mu.remove_H_from_r (r, verbose=False)
@@ -694,12 +694,12 @@ class StructureManager():
 
         if not hasattr(self,'backbone_links'):
             self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
-        
+
         prev_residue={}
         for at_pair in self.backbone_links:
             [at1,at2]=at_pair
             prev_residue[at2.get_parent()]=at1.get_parent()
-            
+
         for r in self.all_residues:
             if mu.is_hetatm(r):
                 continue
@@ -710,14 +710,14 @@ class StructureManager():
             if not r in prev_residue:
                 prev_residue[r]=None
             self.add_hydrogens_backbone(r, prev_residue[r], res_library)
-                
+
             if r not in done_side and rcode != 'GLY':
                 self.add_hydrogens_side(r, res_library, rcode, addH_rules[rcode])
 
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified=True
-            
+
     def add_hydrogens_backbone(self, r, r_1, res_library):
         if 'N' not in r or 'CA'not in r or 'C' not in r:
             print ("Warning: Incomplete backbone in "+ mu.residue_id(r))
@@ -734,15 +734,15 @@ class StructureManager():
                 r.add(self._new_H('H3',crs[2]))
         elif r.get_resname() != 'PRO':
             r.add(self._new_H('H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r_1['C'])))
-        
+
         if r.get_resname() == 'GLY':
             crs = mu.buildCoords2xSP3(1.010, r['CA'],r['N'],r['C'])
             r.add(self._new_H('HA2',crs[0]))
             r.add(self._new_H('HA3',crs[1]))
         else:
             r.add(self._new_H('HA',mu.buildCoordsSP3(1.08,r['CA'],r['N'],r['C'],r['CB'])))
-                
-    
+
+
     def add_hydrogens_side(self, r, res_library, opt, rules):
         if 'N' not in r or 'CA' not in r or 'C' not in r:
             print ("Warning: Incomplete residue in "+ mu.residue_id(r))
@@ -757,8 +757,8 @@ class StructureManager():
                     r[rule['ref_ats'][0]],
                     r[rule['ref_ats'][1]]
                 )
-                r.add(self._new_H(rule['ats'][0],crs[0]))   
-                r.add(self._new_H(rule['ats'][1],crs[1]))  
+                r.add(self._new_H(rule['ats'][0],crs[0]))
+                r.add(self._new_H(rule['ats'][1],crs[1]))
             elif rule['mode'] == "B1":
                 crs = mu.buildCoordsSP3(
                     rule['dist'],
@@ -767,7 +767,7 @@ class StructureManager():
                     r[rule['ref_ats'][1]],
                     r[rule['ref_ats'][2]]
                 )
-                r.add(self._new_H(rule['ats'][0],crs))   
+                r.add(self._new_H(rule['ats'][0],crs))
             elif rule['mode'] == 'S2':
                 crs = mu.buildCoordsSP2(
                     rule['dist'],
@@ -775,11 +775,11 @@ class StructureManager():
                     r[rule['ref_ats'][0]],
                     r[rule['ref_ats'][1]],
                 )
-                r.add(self._new_H(rule['ats'][0],crs))   
+                r.add(self._new_H(rule['ats'][0],crs))
             elif rule['mode'] == 'L':
                 for at_id in rule['ats']:
                     crs = mu.buildCoordsOther(r, res_library, opt, at_id)
                     r.add(self._new_H(at_id,crs))
-                
+
     def _new_H (self, at_id, crs):
         return Atom(at_id,crs,99.0, 1.0,' ',' ' + at_id + ' ',0,'H')

@@ -214,7 +214,7 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
         return RNA
     else:
         return [prot, dna, rna, other]
-    
+
 #===============================================================================
 
 def check_chiral_residue(r, chiral_data):
@@ -540,7 +540,7 @@ def buildCoordsCB(r): # Get CB from Backbone
                        [1.5, 115.5, -123.]
                        )
 
-    
+
 def buildCoords3xSP3(dst,at,at1,at2):
     """
         Generates coordinates for 3 SP3 atoms
@@ -560,7 +560,7 @@ def buildCoords3xSP3(dst,at,at1,at2):
                     [dst,109.470,dihs[i]])
         )
     return crs
-    
+
 def buildCoords2xSP3(dst,at,at1,at2):
     """
         Generates coordinates for two SP3 bonds given the other two
@@ -583,7 +583,7 @@ def buildCoords2xSP3(dst,at,at1,at2):
     crs.append(cr3._ar)
     crs.append(cr4._ar)
     return crs
-    
+
 def buildCoordsSP3(dst, at, at1, at2, at3):
     """
       Calculated cartesian coordinates to complete a SP3 group
@@ -599,7 +599,7 @@ def buildCoordsSP3(dst, at, at1, at2, at3):
     avec /= norm(avec)
     avec *= dst
     return cr0 + avec
-    
+
 def buildCoordsSP2(dst, at, at1, at2):
     """
       Calculates cartesian coordinaties to complete a SP2 group
@@ -607,7 +607,7 @@ def buildCoordsSP2(dst, at, at1, at2):
     cr0 = at.get_coord()
     cr1 = at1.get_coord()
     cr2 = at2.get_coord()
-    
+
     avg = cr1 + cr2
     avg /= 2.
     avec = cr0 - avg
