@@ -514,8 +514,6 @@ def buildCoordsOther(r, res_lib, new_res, at_id):
 
     """
     resid_def = res_lib.residues[new_res]
-    print (new_res)
-    print (resid_def)
     i = 1
     while resid_def.ats[i].id != at_id and i < len(resid_def.ats):
         i = i + 1

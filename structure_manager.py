@@ -681,11 +681,13 @@ class StructureManager():
         # residues with alternative forms
         for r_at in r_at_list:
             [r,opt] = r_at
+        # Skip residues without addH rules
+            if r.get_resname() not in addH_rules:
+                print ("Warning: addH not implemented (yet) for residue ", r.get_resname())
+                continue
             if mu.is_hetatm(r):
                 continue
             rcode=r.get_resname()
-            print (rcode,opt)
-            print (addH_rules[rcode])
             self.add_hydrogens_side(r, res_library, opt, addH_rules[rcode][opt])
             r.resname=opt
             done_side.add(r)
@@ -702,6 +704,9 @@ class StructureManager():
             if mu.is_hetatm(r):
                 continue
             rcode=r.get_resname()
+            if rcode not in addH_rules:
+                print ("Warning: addH not implemented (yet) for residue ", rcode)
+                continue
             if not r in prev_residue:
                 prev_residue[r]=None
             self.add_hydrogens_backbone(r, prev_residue[r], res_library)
