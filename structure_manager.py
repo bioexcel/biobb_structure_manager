@@ -250,7 +250,7 @@ class StructureManager():
         miss_side = []
         for res in self.check_missing_atoms(valid_codes, residue_data):
             [r,at_list]=res
-            if not len(at_list['backbone']):
+            if not len(at_list['backbone']) or at_list['backbone']==['O']:
                 miss_side.append([r,at_list['side']])
         return miss_side
 
@@ -683,7 +683,7 @@ class StructureManager():
             [r,opt] = r_at
         # Skip residues without addH rules
             if r.get_resname() not in addH_rules:
-                print ("Warning: addH not implemented (yet) for residue ", r.get_resname())
+                print ("Warning: (ion) addH not implemented (yet) for residue ", r.get_resname())
                 continue
             if mu.is_hetatm(r):
                 continue
@@ -704,14 +704,14 @@ class StructureManager():
             if mu.is_hetatm(r):
                 continue
             rcode=r.get_resname()
-            if rcode not in addH_rules:
-                print ("Warning: addH not implemented (yet) for residue ", rcode)
-                continue
             if not r in prev_residue:
                 prev_residue[r]=None
             self.add_hydrogens_backbone(r, prev_residue[r], res_library)
 
             if r not in done_side and rcode != 'GLY':
+                if rcode not in addH_rules:
+                    print ("Warning: (oth) addH not implemented (yet) for residue ", rcode)
+                    continue
                 self.add_hydrogens_side(r, res_library, rcode, addH_rules[rcode])
 
         self.residue_renumbering()
