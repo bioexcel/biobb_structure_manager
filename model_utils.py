@@ -495,18 +495,10 @@ def build_atom(r, at_id, res_lib, new_res_id):
         coords = buildCoordsCB(r)
     else:
         coords = buildCoordsOther(r, res_lib, new_res_id, at_id)
+    add_new_atom_to_residue(r,at_id,coords)
 
-    at = Atom(
-              at_id,
-              coords,
-              99.0,
-              1.0,
-              ' ',
-              ' ' + at_id + ' ',
-              0,
-              at_id[0:1]
-              )
-    r.add(at)
+def add_new_atom_to_residue(r, at_id, coords):
+    r.add(Atom(at_id,coords,99.0,1.0,' ',' ' + at_id + ' ',0,at_id[0:1]))
 
 def buildCoordsOther(r, res_lib, new_res, at_id):
     """
@@ -538,6 +530,18 @@ def buildCoordsCB(r): # Get CB from Backbone
                        r['N'].get_coord(),
                        r['C'].get_coord(),
                        [1.5, 115.5, -123.]
+                       )
+
+def buildCoordsO(r): # Get O from Backbone
+    """
+     Calculates cartesian coordinates for a new O atom from backbone.
+
+    """
+    return buildCoords(
+                       r['C'].get_coord(),
+                       r['CA'].get_coord(),
+                       r['N'].get_coord(),
+                       [1.229, 120.500,0.000]
                        )
 
 

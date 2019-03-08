@@ -230,6 +230,10 @@ class StructureManager():
         for r in self.st.get_residues():
             if r.get_resname() in valid_codes and not mu.is_hetatm(r):
                 miss_at = mu.check_all_at_in_r(r, residue_data[r.get_resname().replace(' ','')])
+                if self.is_C_term(r) and 'OXT' not in r:
+                    if not 'backbone' in miss_at:
+                        miss_at['backbone']=[]
+                    miss_at['backbone'].append('OXT')
                 if len(miss_at) > 0:
                     miss_at_list.append([r,miss_at])
         return miss_at_list
@@ -250,7 +254,7 @@ class StructureManager():
         miss_side = []
         for res in self.check_missing_atoms(valid_codes, residue_data):
             [r,at_list]=res
-            if not len(at_list['backbone']) or at_list['backbone']==['O']:
+            if 'side' in at_list and 'N' in r and 'CA' in r and 'C' in r:
                 miss_side.append([r,at_list['side']])
         return miss_side
 
@@ -291,7 +295,7 @@ class StructureManager():
                 miss_bck.append([r,at_list['backbone']])
         return miss_bck
 
-    def get_bck_breaks(self):
+    def get_backbone_breaks(self):
         """
             Determines several backbone anomalies
             1. Modified residues
@@ -309,8 +313,8 @@ class StructureManager():
             if not mu.same_chain(r1,r2):
                 continue
             if mu.is_hetatm(r1) or mu.is_hetatm(r2):
-                if r1 in self.residue_link_to:
-                    if self.residue_link_to[r1] == r2:
+                if r1 in self.next_residue:
+                    if self.next_residue[r1] == r2:
                         if mu.is_hetatm(r1):
                             self.modified_residue_list.append(r1)
                 else:
@@ -319,7 +323,7 @@ class StructureManager():
             if self.chain_ids[r1.get_parent().id] != mu.PROTEIN:
                 continue
 
-            if r1 not in self.residue_link_to:
+            if r1 not in self.next_residue:
                 self.bck_breaks_list.append([r1,r2])
                 if mu.seq_consecutive(r1,r2):
                     d=0.
@@ -329,8 +333,8 @@ class StructureManager():
 
 
             else:
-                if r2 != self.residue_link_to[r1]:
-                    self.wrong_link_list.append([r1,self.residue_link_to[r1],r2])
+                if r2 != self.next_residue[r1]:
+                    self.wrong_link_list.append([r1,self.next_residue[r1],r2])
 
     def check_backbone_connect(self, backbone_atoms, COVLNK):
         """
@@ -338,15 +342,19 @@ class StructureManager():
         link relationships in the N-term to C-term direction
 
         Args:
-            beckbone_atoms: atoms to be considered as backbone
+            backbone_atoms: atoms to be considered as backbone
             COVLNK: Threshold distance for a covalent bond
         """
         if not hasattr(self,'backbone_links'):
             self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
-        self.residue_link_to = {}
+        self.next_residue = {}
+        self.prev_residue = {}
         for lnk in self.backbone_links:
             [at1, at2] = lnk
-            self.residue_link_to[at1.get_parent()]=at2.get_parent()
+            r1 = at1.get_parent()
+            r2 = at2.get_parent()
+            self.prev_residue[r2]=r1
+            self.next_residue[r1]=r2
 
     def check_cis_backbone(self, COVLNK, check_models=True):
         """
@@ -651,19 +659,31 @@ class StructureManager():
                 coords = mu.buildCoordsCB(r_at[0])
             else:
                 coords = mu.buildCoordsOther(r_at[0], res_library, r_at[0].get_resname(), at_id)
-
-            r_at[0].add(Atom(
-                at_id,
-                coords,
-                99.0,
-                1.0,
-                ' ',
-                ' ' + at_id + ' ',
-                0,
-                at_id[0:1]
-                ))
+            mu.add_new_atom_to_residue(r_at[0], at_id, coords)
         self.atom_renumbering()
         self.modified=True
+
+    def fix_backbone_atoms(self,r_at):
+        """Adding missing backbone atoms not affecting main-chain like O and OXT
+                Args:
+            **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
+            **res_library**: Residue Library as structure_manager.residue_lib_manager.ResidueLib
+        """
+        [r,at_list] = r_at
+        print (mu.residue_id(r))
+        if not 'C' in r:
+            print ("  Warning: not enough backbone to reconstruct missing atoms")
+            return False
+        if len(at_list) == 2 or at_list==['O']:
+            print ("  Adding new atom O")
+            mu.add_new_atom_to_residue(r,'O',mu.buildCoordsO(r))
+        if 'OXT' in at_list:
+            print ("  Adding new atom OXT")
+            mu.add_new_atom_to_residue(r,'OXT',mu.buildCoordsSP2(1.229, r['C'], r['CA'], r['O']))
+
+        self.atom_renumbering()
+        self.modified=True
+        return True
 
     def add_hydrogens(self,r_at_list, hydrogens_list, res_library, backbone_atoms, COVLNK, addH_rules, remove_H=True):
         """
@@ -683,7 +703,7 @@ class StructureManager():
             [r,opt] = r_at
         # Skip residues without addH rules
             if r.get_resname() not in addH_rules:
-                print ("Warning: (ion) addH not implemented (yet) for residue ", r.get_resname())
+                print ("Warning: addH not implemented (yet) for residue ", r.get_resname())
                 continue
             if mu.is_hetatm(r):
                 continue
@@ -692,25 +712,19 @@ class StructureManager():
             r.resname=opt
             done_side.add(r)
 
-        if not hasattr(self,'backbone_links'):
-            self.backbone_links = mu.get_backbone_links(self.get_structure(), backbone_atoms, COVLNK)
-
-        prev_residue={}
-        for at_pair in self.backbone_links:
-            [at1,at2]=at_pair
-            prev_residue[at2.get_parent()]=at1.get_parent()
-
         for r in self.all_residues:
             if mu.is_hetatm(r):
                 continue
             rcode=r.get_resname()
-            if not r in prev_residue:
-                prev_residue[r]=None
-            self.add_hydrogens_backbone(r, prev_residue[r], res_library)
+            if not r in self.prev_residue:
+                prev_residue=None
+            else:
+                prev_residue=self.prev_residue[r]
+            self.add_hydrogens_backbone(r, prev_residue, res_library)
 
             if r not in done_side and rcode != 'GLY':
                 if rcode not in addH_rules:
-                    print ("Warning: (oth) addH not implemented (yet) for residue ", rcode)
+                    print ("Warning: addH not implemented (yet) for residue ", rcode)
                     continue
                 self.add_hydrogens_side(r, res_library, rcode, addH_rules[rcode])
 
@@ -726,22 +740,21 @@ class StructureManager():
         if r_1 == None:
             # Nterminal TODO  Neutral NTerm
             if r.get_resname() == 'PRO':
-                r.add(self._new_H('H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r['CD'])))
+                mu.add_new_atom_to_residue(r,'H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r['CD']))
             else:
                 crs = mu.buildCoords3xSP3(1.010, r['N'], r['CA'], r['C'])
-                r.add(self._new_H('H1',crs[0]))
-                r.add(self._new_H('H2',crs[1]))
-                r.add(self._new_H('H3',crs[2]))
+                mu.add_new_atom_to_residue(r,'H1',crs[0])
+                mu.add_new_atom_to_residue(r,'H2',crs[1])
+                mu.add_new_atom_to_residue(r,'H3',crs[2])
         elif r.get_resname() != 'PRO':
-            r.add(self._new_H('H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r_1['C'])))
+            mu.add_new_atom_to_residue(r,'H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r_1['C']))
 
         if r.get_resname() == 'GLY':
             crs = mu.buildCoords2xSP3(1.010, r['CA'],r['N'],r['C'])
-            r.add(self._new_H('HA2',crs[0]))
-            r.add(self._new_H('HA3',crs[1]))
+            mu.add_new_atom_to_residue(r, 'HA2',crs[0])
+            mu.add_new_atom_to_residue(r, 'HA3',crs[1])
         else:
-            r.add(self._new_H('HA',mu.buildCoordsSP3(1.08,r['CA'],r['N'],r['C'],r['CB'])))
-
+            mu.add_new_atom_to_residue(r, 'HA',mu.buildCoordsSP3(1.08,r['CA'],r['N'],r['C'],r['CB']))
 
     def add_hydrogens_side(self, r, res_library, opt, rules):
         if 'N' not in r or 'CA' not in r or 'C' not in r:
@@ -757,8 +770,8 @@ class StructureManager():
                     r[rule['ref_ats'][0]],
                     r[rule['ref_ats'][1]]
                 )
-                r.add(self._new_H(rule['ats'][0],crs[0]))
-                r.add(self._new_H(rule['ats'][1],crs[1]))
+                mu.add_new_atom_to_residue(r, rule['ats'][0],crs[0])
+                mu.add_new_atom_to_residue(r, rule['ats'][1],crs[1])
             elif rule['mode'] == "B1":
                 crs = mu.buildCoordsSP3(
                     rule['dist'],
@@ -767,7 +780,7 @@ class StructureManager():
                     r[rule['ref_ats'][1]],
                     r[rule['ref_ats'][2]]
                 )
-                r.add(self._new_H(rule['ats'][0],crs))
+                mu.add_new_atom_to_residue(r, rule['ats'][0],crs)
             elif rule['mode'] == 'S2':
                 crs = mu.buildCoordsSP2(
                     rule['dist'],
@@ -775,11 +788,14 @@ class StructureManager():
                     r[rule['ref_ats'][0]],
                     r[rule['ref_ats'][1]],
                 )
-                r.add(self._new_H(rule['ats'][0],crs))
+                mu.add_new_atom_to_residue(r, rule['ats'][0],crs)
             elif rule['mode'] == 'L':
                 for at_id in rule['ats']:
                     crs = mu.buildCoordsOther(r, res_library, opt, at_id)
-                    r.add(self._new_H(at_id,crs))
+                    mu.add_new_atom_to_residue(r, at_id,crs)
 
-    def _new_H (self, at_id, crs):
-        return Atom(at_id,crs,99.0, 1.0,' ',' ' + at_id + ' ',0,'H')
+    def is_N_term(self,r):
+        return r not in self.prev_residue
+
+    def is_C_term(self,r):
+        return r not in self.next_residue
