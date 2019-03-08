@@ -53,6 +53,9 @@ class ResidueLib():
                 if len(data) < 11:
                     continue
                 at = AtomDef(data)
+                for i in range(0,3):
+                    if at.link[i]> 0:
+                        at.link_ats[i]=res.ats[at.link[i]].id
                 res.ats.append(at)
 
             elif ch_group:
@@ -61,6 +64,16 @@ class ResidueLib():
 
             elif im_group:
                 res.improper.append(line)
+    
+    def get_atom_def(self, res_id, at_id):
+        resid_def = self.residues[res_id]
+        i = 1
+        while resid_def.ats[i].id != at_id and i < len(resid_def.ats):
+            i = i + 1
+        if resid_def.ats[i].id == at_id:
+            return resid_def.ats[i]
+        else:
+            return None
 
 class ResidueDef():
 
@@ -78,6 +91,7 @@ class AtomDef():
         self.type = data[2]
         self.branch = data[3]
         self.link = [int(data[4]), int(data[5]), int(data[6])]
+        self.link_ats = ['','','']
         self.geom = [float(data[7]), float(data[8]), float(data[9])]
         self.coord = [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]
         self.ch = float(data[10])

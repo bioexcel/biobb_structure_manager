@@ -41,6 +41,13 @@ ORGANIC = 3
 COVORGANIC = 4
 WAT = 5
 
+#Geometry
+CBINTERNALS = [1.5, 115.5, -123.]
+OINTERNALS = [1.229, 120.500,0.000]
+SP3ANGLE = 109.470
+SP3DIHS = [60.0,180.0,300.0]
+
+
 # TODO: consider replace by Bio.PDB equivalent
 one_letter_residue_code = {
     'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G',
@@ -376,7 +383,7 @@ def get_ligands(st, incl_water=False):
 
 def get_residues_with_H(st):
     """
-    Get residues containint Hydrogen atoms
+    Get residues containing Hydrogen atoms
 
     """
     resh_list = []
@@ -500,52 +507,40 @@ def build_atom(r, at_id, res_lib, new_res_id):
 def add_new_atom_to_residue(r, at_id, coords):
     r.add(Atom(at_id,coords,99.0,1.0,' ',' ' + at_id + ' ',0,at_id[0:1]))
 
-def buildCoordsOther(r, res_lib, new_res, at_id):
+def build_coords_from_lib(r, res_lib, new_res, at_id):
     """
      Calculates cartesian coordinates for a new atom from internal coordinates definition.
 
     """
-    resid_def = res_lib.residues[new_res]
-    i = 1
-    while resid_def.ats[i].id != at_id and i < len(resid_def.ats):
-        i = i + 1
-    if resid_def.ats[i].id == at_id:
-        return buildCoords(
-                           r[resid_def.ats[resid_def.ats[i].link[0]].id].get_coord(),
-                           r[resid_def.ats[resid_def.ats[i].link[1]].id].get_coord(),
-                           r[resid_def.ats[resid_def.ats[i].link[2]].id].get_coord(),
-                           resid_def.ats[i].geom
-                           )
-    else:
+    atom_def = res_lib.get_atom_def(new_res, at_id)
+    if atom_def == None:
         print ("#ERROR: Unknown target atom")
         sys.exit(1)
+        
+    return build_coords_from_ats_internal(
+            r[atom_def.link_ats[0]],
+            r[atom_def.link_ats[1]],
+            r[atom_def.link_ats[2]],
+             atom_def.geom
+        )
+    
 
-def buildCoordsCB(r): # Get CB from Backbone
+def build_coords_CB(r): # Get CB from Backbone
     """
      Calculates cartesian coordinates for a new CB atom from backbone.
 
     """
-    return buildCoords(
-                       r['CA'].get_coord(),
-                       r['N'].get_coord(),
-                       r['C'].get_coord(),
-                       [1.5, 115.5, -123.]
-                       )
+    return build_coords_from_ats_internal(r['CA'],r['N'],r['C'],CBINTERNALS)
 
-def buildCoordsO(r): # Get O from Backbone
+def build_coords_O(r): # Get O from Backbone
     """
      Calculates cartesian coordinates for a new O atom from backbone.
 
     """
-    return buildCoords(
-                       r['C'].get_coord(),
-                       r['CA'].get_coord(),
-                       r['N'].get_coord(),
-                       [1.229, 120.500,0.000]
+    return build_coords_from_ats_internal(r['C'],r['CA'],r['N'],OINTERNALS
                        )
 
-
-def buildCoords3xSP3(dst,at,at1,at2):
+def build_coords_3xSP3(dst,at,at1,at2):
     """
         Generates coordinates for 3 SP3 atoms
         **dst** bond distance
@@ -554,18 +549,13 @@ def buildCoords3xSP3(dst,at,at1,at2):
         **at2** atom to define dihedrals
     """
     #TODO try a pure geometrical generation to avoid at2
-    dihs = [60.0,180.0,300.0]
     crs=[]
     for i in range(0,3):
-        crs.append(buildCoords(
-                    at.get_coord(),
-                    at1.get_coord(),
-                    at2.get_coord(),
-                    [dst,109.470,dihs[i]])
-        )
+        crs.append(build_coords_from_ats_internal(at,at1,at2,[dst,SP3ANGLE,SP3DIHS[i]]))
     return crs
 
-def buildCoords2xSP3(dst,at,at1,at2):
+
+def build_coords_2xSP3(dst,at,at1,at2):
     """
         Generates coordinates for two SP3 bonds given the other two
         **dst** Bond distance
@@ -588,7 +578,7 @@ def buildCoords2xSP3(dst,at,at1,at2):
     crs.append(cr4._ar)
     return crs
 
-def buildCoordsSP3(dst, at, at1, at2, at3):
+def build_coords_1xSP3(dst, at, at1, at2, at3):
     """
       Calculated cartesian coordinates to complete a SP3 group
     """
@@ -604,7 +594,7 @@ def buildCoordsSP3(dst, at, at1, at2, at3):
     avec *= dst
     return cr0 + avec
 
-def buildCoordsSP2(dst, at, at1, at2):
+def build_coords_SP2(dst, at, at1, at2):
     """
       Calculates cartesian coordinaties to complete a SP2 group
     """
@@ -619,7 +609,15 @@ def buildCoordsSP2(dst, at, at1, at2):
     avec *= dst
     return cr0 + avec
 
-def buildCoords(avec, bvec, cvec, geom):
+
+def build_coords_from_ats_internal(at1, at2, at3, geom):
+    return build_coords_from_internal(
+        at1.get_coord(), 
+        at2.get_coord(), 
+        at3.get_coord(), 
+        geom)
+
+def build_coords_from_internal(at1c, at2c, at3c, geom):
     """
      Calculates cartesian coordinates for a new atom from internal coordinates.
 
@@ -628,8 +626,8 @@ def buildCoords(avec, bvec, cvec, geom):
     ang = geom[1] * pi / 180.
     tor = geom[2] * pi / 180.0
 
-    v1 = avec-bvec
-    v2 = avec-cvec
+    v1 = at1c-at2c
+    v2 = at1c-at3c
 
     n = np.cross(v1, v2)
     nn = np.cross(v1, n)
@@ -647,7 +645,7 @@ def buildCoords(avec, bvec, cvec, geom):
     v1 /= norm(v1)
     v1 *= dst * cos(ang)
 
-    return avec + v3 - v1
+    return at1c + v3 - v1
 
 # Metrics =============================================================
 def calc_at_dist(at1, at2):

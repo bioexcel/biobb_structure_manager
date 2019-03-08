@@ -656,9 +656,9 @@ class StructureManager():
         for at_id in r_at[1]:
             print ("  Adding new atom " + at_id)
             if at_id == 'CB':
-                coords = mu.buildCoordsCB(r_at[0])
+                coords = mu.build_coords_CB(r_at[0])
             else:
-                coords = mu.buildCoordsOther(r_at[0], res_library, r_at[0].get_resname(), at_id)
+                coords = mu.build_coords_from_lib(r_at[0], res_library, r_at[0].get_resname(), at_id)
             mu.add_new_atom_to_residue(r_at[0], at_id, coords)
         self.atom_renumbering()
         self.modified=True
@@ -676,10 +676,10 @@ class StructureManager():
             return False
         if len(at_list) == 2 or at_list==['O']:
             print ("  Adding new atom O")
-            mu.add_new_atom_to_residue(r,'O',mu.buildCoordsO(r))
+            mu.add_new_atom_to_residue(r,'O',mu.build_coords_O(r))
         if 'OXT' in at_list:
             print ("  Adding new atom OXT")
-            mu.add_new_atom_to_residue(r,'OXT',mu.buildCoordsSP2(1.229, r['C'], r['CA'], r['O']))
+            mu.add_new_atom_to_residue(r,'OXT',mu.build_coords_SP2(1.229, r['C'], r['CA'], r['O']))
 
         self.atom_renumbering()
         self.modified=True
@@ -740,21 +740,21 @@ class StructureManager():
         if r_1 == None:
             # Nterminal TODO  Neutral NTerm
             if r.get_resname() == 'PRO':
-                mu.add_new_atom_to_residue(r,'H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r['CD']))
+                mu.add_new_atom_to_residue(r,'H',mu.build_coords_SP2(1.08, r['N'],r['CA'],r['CD']))
             else:
-                crs = mu.buildCoords3xSP3(1.010, r['N'], r['CA'], r['C'])
+                crs = mu.build_coords_3xSP3(1.010, r['N'], r['CA'], r['C'])
                 mu.add_new_atom_to_residue(r,'H1',crs[0])
                 mu.add_new_atom_to_residue(r,'H2',crs[1])
                 mu.add_new_atom_to_residue(r,'H3',crs[2])
         elif r.get_resname() != 'PRO':
-            mu.add_new_atom_to_residue(r,'H',mu.buildCoordsSP2(1.08, r['N'],r['CA'],r_1['C']))
+            mu.add_new_atom_to_residue(r,'H',mu.build_coords_SP2(1.08, r['N'],r['CA'],r_1['C']))
 
         if r.get_resname() == 'GLY':
-            crs = mu.buildCoords2xSP3(1.010, r['CA'],r['N'],r['C'])
+            crs = mu.build_coords_2xSP3(1.010, r['CA'],r['N'],r['C'])
             mu.add_new_atom_to_residue(r, 'HA2',crs[0])
             mu.add_new_atom_to_residue(r, 'HA3',crs[1])
         else:
-            mu.add_new_atom_to_residue(r, 'HA',mu.buildCoordsSP3(1.08,r['CA'],r['N'],r['C'],r['CB']))
+            mu.add_new_atom_to_residue(r, 'HA',mu.build_coords_1xSP3(1.08,r['CA'],r['N'],r['C'],r['CB']))
 
     def add_hydrogens_side(self, r, res_library, opt, rules):
         if 'N' not in r or 'CA' not in r or 'C' not in r:
@@ -764,7 +764,7 @@ class StructureManager():
         for kr in rules.keys():
             rule=rules[kr]
             if rule['mode'] == 'B2':
-                crs= mu.buildCoords2xSP3(
+                crs= mu.build_coords_2xSP3(
                     rule['dist'],
                     r[kr],
                     r[rule['ref_ats'][0]],
@@ -773,7 +773,7 @@ class StructureManager():
                 mu.add_new_atom_to_residue(r, rule['ats'][0],crs[0])
                 mu.add_new_atom_to_residue(r, rule['ats'][1],crs[1])
             elif rule['mode'] == "B1":
-                crs = mu.buildCoordsSP3(
+                crs = mu.build_coords_1xSP3(
                     rule['dist'],
                     r[kr],
                     r[rule['ref_ats'][0]],
@@ -782,7 +782,7 @@ class StructureManager():
                 )
                 mu.add_new_atom_to_residue(r, rule['ats'][0],crs)
             elif rule['mode'] == 'S2':
-                crs = mu.buildCoordsSP2(
+                crs = mu.build_coords_SP2(
                     rule['dist'],
                     r[kr],
                     r[rule['ref_ats'][0]],
@@ -791,7 +791,7 @@ class StructureManager():
                 mu.add_new_atom_to_residue(r, rule['ats'][0],crs)
             elif rule['mode'] == 'L':
                 for at_id in rule['ats']:
-                    crs = mu.buildCoordsOther(r, res_library, opt, at_id)
+                    crs = mu.build_coords_from_lib(r, res_library, opt, at_id)
                     mu.add_new_atom_to_residue(r, at_id,crs)
 
     def is_N_term(self,r):
