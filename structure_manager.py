@@ -672,7 +672,8 @@ class StructureManager():
         [r,at_list] = r_at
         print (mu.residue_id(r))
         if not 'C' in r:
-            print ("  Warning: not enough backbone to reconstruct missing atoms", file=sys.stderr)
+            print ("Warning: not enough backbone to reconstruct missing atoms at "+ mu.residue_id(r), file=sys.stderr)
+            print ("  Warning: not enough backbone to reconstruct missing atoms")
             return False
         if len(at_list) == 2 or at_list==['O']:
             print ("  Adding new atom O")
@@ -703,7 +704,7 @@ class StructureManager():
             [r,opt] = r_at
         # Skip residues without addH rules
             if r.get_resname() not in addH_rules:
-                print ("Warning: addH not implemented (yet) for residue ", r.get_resname(),file=sys.stderr)
+                print ("Warning: addH rules not available for residue type ", r.get_resname(),file=sys.stderr)
                 continue
             if mu.is_hetatm(r):
                 continue
@@ -724,7 +725,7 @@ class StructureManager():
 
             if r not in done_side and rcode != 'GLY':
                 if rcode not in addH_rules:
-                    print ("Warning: addH not implemented (yet) for residue ", rcode, file=sys.stderr)
+                    print ("Warning: addH rules not available for residue type ", rcode, file=sys.stderr)
                     continue
                 self.add_hydrogens_side(r, res_library, rcode, addH_rules[rcode])
 
@@ -761,7 +762,7 @@ class StructureManager():
 
     def add_hydrogens_side(self, r, res_library, opt, rules):
         if 'N' not in r or 'CA' not in r or 'C' not in r:
-            print ("Warning: Incomplete residue in "+ mu.residue_id(r),file=sys.stderr)
+            print ("Warning: Incomplete backbone in "+ mu.residue_id(r),file=sys.stderr)
             return 1
         rcode=r.get_resname()
         for kr in rules.keys():

@@ -499,9 +499,9 @@ def delete_atom(r, at_id):
 
 def build_atom(r, at_id, res_lib, new_res_id):
     if at_id == 'CB':
-        coords = buildCoordsCB(r)
+        coords = build_coords_CB(r)
     else:
-        coords = buildCoordsOther(r, res_lib, new_res_id, at_id)
+        coords = build_coords_from_lib(r, res_lib, new_res_id, at_id)
     add_new_atom_to_residue(r,at_id,coords)
 
 def add_new_atom_to_residue(r, at_id, coords):
