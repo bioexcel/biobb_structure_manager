@@ -254,7 +254,7 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
     for at in [at1, at2, at3, at4]:
         at_ok = at_ok and at in r
         if not at_ok:
-            print ('Warning: atom {:3} not found in {}'.format(at, residue_id(r)))
+            print ('Warning: atom {:3} not found in {}'.format(at, residue_id(r)),file=sys.stderr)
     if at_ok:
         v1 = r[at1].coord-r[at2].coord
         v2 = r[at3].coord-r[at2].coord
@@ -414,7 +414,7 @@ def get_backbone_links(st, backbone_atoms, COVLNK, join_models=True): #TODO diff
                    and (join_models or same_model(at1.get_parent(),at2.get_parent())):
                     cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
-            print ("Warning: No backbone atoms defined")
+            print ("Warning: No backbone atoms defined", file=sys.stderr)
 
     return cov_links
 
@@ -516,14 +516,14 @@ def build_coords_from_lib(r, res_lib, new_res, at_id):
     if atom_def == None:
         print ("#ERROR: Unknown target atom")
         sys.exit(1)
-        
+
     return build_coords_from_ats_internal(
             r[atom_def.link_ats[0]],
             r[atom_def.link_ats[1]],
             r[atom_def.link_ats[2]],
              atom_def.geom
         )
-    
+
 
 def build_coords_CB(r): # Get CB from Backbone
     """
@@ -612,9 +612,9 @@ def build_coords_SP2(dst, at, at1, at2):
 
 def build_coords_from_ats_internal(at1, at2, at3, geom):
     return build_coords_from_internal(
-        at1.get_coord(), 
-        at2.get_coord(), 
-        at3.get_coord(), 
+        at1.get_coord(),
+        at2.get_coord(),
+        at3.get_coord(),
         geom)
 
 def build_coords_from_internal(at1c, at2c, at3c, geom):

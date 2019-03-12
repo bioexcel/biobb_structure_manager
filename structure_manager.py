@@ -672,7 +672,7 @@ class StructureManager():
         [r,at_list] = r_at
         print (mu.residue_id(r))
         if not 'C' in r:
-            print ("  Warning: not enough backbone to reconstruct missing atoms")
+            print ("  Warning: not enough backbone to reconstruct missing atoms", file=sys.stderr)
             return False
         if len(at_list) == 2 or at_list==['O']:
             print ("  Adding new atom O")
@@ -703,7 +703,7 @@ class StructureManager():
             [r,opt] = r_at
         # Skip residues without addH rules
             if r.get_resname() not in addH_rules:
-                print ("Warning: addH not implemented (yet) for residue ", r.get_resname())
+                print ("Warning: addH not implemented (yet) for residue ", r.get_resname(),file=sys.stderr)
                 continue
             if mu.is_hetatm(r):
                 continue
@@ -724,7 +724,7 @@ class StructureManager():
 
             if r not in done_side and rcode != 'GLY':
                 if rcode not in addH_rules:
-                    print ("Warning: addH not implemented (yet) for residue ", rcode)
+                    print ("Warning: addH not implemented (yet) for residue ", rcode, file=sys.stderr)
                     continue
                 self.add_hydrogens_side(r, res_library, rcode, addH_rules[rcode])
 
@@ -734,7 +734,7 @@ class StructureManager():
 
     def add_hydrogens_backbone(self, r, r_1, res_library):
         if 'N' not in r or 'CA'not in r or 'C' not in r:
-            print ("Warning: Incomplete backbone in "+ mu.residue_id(r))
+            print ("Warning: Incomplete backbone in "+ mu.residue_id(r), file=sys.stderr)
             return 1
 
         if r_1 == None:
@@ -754,11 +754,14 @@ class StructureManager():
             mu.add_new_atom_to_residue(r, 'HA2',crs[0])
             mu.add_new_atom_to_residue(r, 'HA3',crs[1])
         else:
+            if 'CB' not in r:
+                print ("Warning: Incomplete residue (CB atom) in "+ mu.residue_id(r),file=sys.stderr)
+                return 1
             mu.add_new_atom_to_residue(r, 'HA',mu.build_coords_1xSP3(1.08,r['CA'],r['N'],r['C'],r['CB']))
 
     def add_hydrogens_side(self, r, res_library, opt, rules):
         if 'N' not in r or 'CA' not in r or 'C' not in r:
-            print ("Warning: Incomplete residue in "+ mu.residue_id(r))
+            print ("Warning: Incomplete residue in "+ mu.residue_id(r),file=sys.stderr)
             return 1
         rcode=r.get_resname()
         for kr in rules.keys():
