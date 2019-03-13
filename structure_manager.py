@@ -676,9 +676,15 @@ class StructureManager():
             print ("  Warning: not enough backbone to reconstruct missing atoms")
             return False
         if len(at_list) == 2 or at_list==['O']:
+            if not 'CA' in r or not 'N' in r or not 'C' in r:
+                print ("Warning: not enough backbone atoms to build O", file=sys.stderr)
+                return 1
             print ("  Adding new atom O")
             mu.add_new_atom_to_residue(r,'O',mu.build_coords_O(r))
         if 'OXT' in at_list:
+            if not 'CA' in r or not 'C' in r or not 'O' in r:
+                print ("Warning: not enough backbone atoms to build OXT", file=sys.stderr)
+                return 1
             print ("  Adding new atom OXT")
             mu.add_new_atom_to_residue(r,'OXT',mu.build_coords_SP2(1.229, r['C'], r['CA'], r['O']))
 
