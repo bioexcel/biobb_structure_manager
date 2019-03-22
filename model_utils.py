@@ -7,13 +7,7 @@ from Bio.PDB.NeighborSearch import NeighborSearch
 from Bio.PDB.vectors import Vector,rotaxis
 import math
 import numpy as np
-from numpy import arccos
-from numpy import clip
-from numpy import cos
-from numpy import dot
-from numpy import pi
-from numpy import sin
-from numpy import sqrt
+from numpy import arccos,clip,cos, dot, pi, sin, sqrt
 from numpy.linalg import norm
 import re
 import sys

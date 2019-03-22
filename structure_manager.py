@@ -672,18 +672,18 @@ class StructureManager():
         [r,at_list] = r_at
         print (mu.residue_id(r))
         if not 'C' in r:
-            print ("Warning: not enough backbone to reconstruct missing atoms at "+ mu.residue_id(r), file=sys.stderr)
+            print ("Warning: not enough backbone to reconstruct missing atoms on "+ mu.residue_id(r), file=sys.stderr)
             print ("  Warning: not enough backbone to reconstruct missing atoms")
             return False
         if len(at_list) == 2 or at_list==['O']:
             if not 'CA' in r or not 'N' in r or not 'C' in r:
-                print ("Warning: not enough backbone atoms to build O", file=sys.stderr)
+                print ("Warning: not enough backbone atoms to build O on ",mu.residue_id(r), file=sys.stderr)
                 return 1
             print ("  Adding new atom O")
             mu.add_new_atom_to_residue(r,'O',mu.build_coords_O(r))
         if 'OXT' in at_list:
             if not 'CA' in r or not 'C' in r or not 'O' in r:
-                print ("Warning: not enough backbone atoms to build OXT", file=sys.stderr)
+                print ("Warning: not enough backbone atoms to build OXT on ",mu.residue_id(r), file=sys.stderr)
                 return 1
             print ("  Adding new atom OXT")
             mu.add_new_atom_to_residue(r,'OXT',mu.build_coords_SP2(1.229, r['C'], r['CA'], r['O']))
@@ -740,29 +740,40 @@ class StructureManager():
         self.modified=True
 
     def add_hydrogens_backbone(self, r, r_1, res_library):
-        if 'N' not in r or 'CA'not in r or 'C' not in r:
-            print ("Warning: Incomplete backbone in "+ mu.residue_id(r), file=sys.stderr)
+        if not 'N' in r or not 'CA' in r:
+            print ("Warning: not enough atoms to build backbone H(s) on ",mu.residue_id(r), file=sys.stderr)
             return 1
-
         if r_1 == None:
             # Nterminal TODO  Neutral NTerm
             if r.get_resname() == 'PRO':
+                if not 'CD' in r:
+                    print ("Warning: not enough atoms to build backbone H(s) on ",mu.residue_id(r), file=sys.stderr)
+                    return 1
                 mu.add_new_atom_to_residue(r,'H',mu.build_coords_SP2(1.08, r['N'],r['CA'],r['CD']))
             else:
+                if not 'C' in r:
+                    print ("Warning: not enough atoms to build backbone H(s) on ",mu.residue_id(r), file=sys.stderr)
+                    return 1
                 crs = mu.build_coords_3xSP3(1.010, r['N'], r['CA'], r['C'])
                 mu.add_new_atom_to_residue(r,'H1',crs[0])
                 mu.add_new_atom_to_residue(r,'H2',crs[1])
                 mu.add_new_atom_to_residue(r,'H3',crs[2])
         elif r.get_resname() != 'PRO':
+            if not 'C' in r_1:
+                print ("Warning: not enough atoms to build backbone H(s) on ",mu.residue_id(r), file=sys.stderr)
+                return 1
             mu.add_new_atom_to_residue(r,'H',mu.build_coords_SP2(1.08, r['N'],r['CA'],r_1['C']))
 
         if r.get_resname() == 'GLY':
+            if not 'C' in r:
+                print ("Warning: not enough atoms to build backbone H(s) on ",mu.residue_id(r), file=sys.stderr)
+                return 1
             crs = mu.build_coords_2xSP3(1.010, r['CA'],r['N'],r['C'])
             mu.add_new_atom_to_residue(r, 'HA2',crs[0])
             mu.add_new_atom_to_residue(r, 'HA3',crs[1])
         else:
-            if 'CB' not in r:
-                print ("Warning: Incomplete residue (CB atom) in "+ mu.residue_id(r),file=sys.stderr)
+            if not 'C' in r or not 'CB' in r:
+                print ("Warning: not enough atoms to build H on ",mu.residue_id(r), file=sys.stderr)
                 return 1
             mu.add_new_atom_to_residue(r, 'HA',mu.build_coords_1xSP3(1.08,r['CA'],r['N'],r['C'],r['CB']))
 
