@@ -2,15 +2,15 @@
   Utility functions to manipulate structures. based on Bio.PDB data model
 """
 
-from Bio.PDB.Atom import Atom
-from Bio.PDB.NeighborSearch import NeighborSearch
-from Bio.PDB.vectors import Vector,rotaxis
-import math
-import numpy as np
-from numpy import arccos,clip,cos, dot, pi, sin, sqrt
-from numpy.linalg import norm
 import re
 import sys
+import numpy as np
+from numpy import arccos, clip, cos, dot, pi, sin, sqrt
+from numpy.linalg import norm
+
+from Bio.PDB.Atom import Atom
+from Bio.PDB.NeighborSearch import NeighborSearch
+from Bio.PDB.vectors import Vector, rotaxis
 
 UNKNOWN = 0
 
@@ -20,13 +20,13 @@ DNA = 2
 RNA = 3
 NA = 4
 SEQ_THRESHOLD = 0.8
-chain_type_labels = {PROTEIN:'Protein', DNA:'DNA', RNA:'RNA', UNKNOWN:'Unknown'}
+CHAIN_TYPE_LABELS = {PROTEIN:'Protein', DNA:'DNA', RNA:'RNA', UNKNOWN:'Unknown'}
 
 #Model Types
 ENSM = 1
 BUNIT = 2
 MODELS_MAXRMS = 15.0    # Threshold value to detect NMR models (angs)
-model_type_labels = {ENSM:'Ensembl/NMR', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
+MODEL_TYPE_LABELS = {ENSM:'Ensembl/NMR', BUNIT:'BioUnit', UNKNOWN:'Unknown'}
 
 #HetAtm Types
 MODRES = 1
@@ -37,152 +37,145 @@ WAT = 5
 
 #Geometry
 CBINTERNALS = [1.5, 115.5, -123.]
-OINTERNALS = [1.229, 120.500,0.000]
+OINTERNALS = [1.229, 120.500, 0.000]
 SP3ANGLE = 109.470
-SP3DIHS = [60.0,180.0,300.0]
+SP3DIHS = [60.0, 180.0, 300.0]
 
 
 # TODO: consider replace by Bio.PDB equivalent
-one_letter_residue_code = {
+ONE_LETTER_RESIDUE_CODE = {
     'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G',
     'HIS':'H', 'HID':'H', 'HIE':'H', 'ILE':'I', 'LYS':'K', 'LEU':'L',
     'MET':'M', 'ASN':'N', 'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S',
     'THR':'T', 'VAL':'V', 'TRP':'W', 'TYR':'Y'
 }
 
-three_letter_residue_code = {
+THREE_LETTER_RESIDUE_CODE = {
     'A':'ALA', 'C': 'CYS', 'D':'ASP', 'E':'GLU', 'F':'PHE', 'G':'GLY',
     'H':'HIS', 'I':'ILE', 'K':'LYS', 'L':'LEU', 'M':'MET', 'N':'ASN',
     'P':'PRO', 'Q':'GLN', 'R':'ARG', 'S':'SER',
     'T':'THR', 'V':'VAL', 'W':'TRP', 'Y':'TYR'
 }
 
-dna_residue_code = ['DA', 'DC', 'DG', 'DT']
-rna_residue_code = ['A', 'C', 'G', 'U']
-na_residue_code = dna_residue_code + rna_residue_code
-
+DNA_RESIDUE_CODE = ['DA', 'DC', 'DG', 'DT']
+RNA_RESIDUE_CODE = ['A', 'C', 'G', 'U']
+NA_RESIDUE_CODE = DNA_RESIDUE_CODE + RNA_RESIDUE_CODE
 
 # Residue & Atom friendly ids
-
-def residue_id(r, models='auto'):
+def residue_id(res, models='auto'):
     """
     Friendly replacement for residue ids like ASN A324/0
     """
-    return '{:>3} {}'.format(r.get_resname(), residue_num(r, models))
+    return '{:>3} {}'.format(res.get_resname(), residue_num(res, models))
 
-def residue_num (r, models='auto'):
+def residue_num(res, models='auto'):
     """
     Shortcut for getting residue num including chain id, includes model number if any
     """
     if models == 'auto':
-        models = len(r.get_parent().get_parent().get_parent()) > 1
+        models = len(res.get_parent().get_parent().get_parent()) > 1
 
-    if has_ins_code(r):
-        rn = str(r.get_parent().id) + str(r.id[1]) + r.id[2]
+    if has_ins_code(res):
+        rnum = str(res.get_parent().id) + str(res.id[1]) + res.id[2]
     else:
-        rn = str(r.get_parent().id) + str(r.id[1])
+        rnum = str(res.get_parent().id) + str(res.id[1])
     if models:
-        rn += "/" + str(r.get_parent().get_parent().id + 1)
-    return rn
+        rnum += "/" + str(res.get_parent().get_parent().id + 1)
+    return rnum
 
-def atom_id(at, models='auto'):
+def atom_id(atm, models='auto'):
     """
     Friendly replacement for atom ids like ASN A324/0.CA
     """
-    return '{}.{}'.format(residue_id(at.get_parent(), models), at.id)
+    return '{}.{}'.format(residue_id(atm.get_parent(), models), atm.id)
 
 # Id Checks
-def protein_residue_check(r):
+def protein_residue_check(res):
     """
     Checks whether is a valid protein residue id, either one or three letter code
     return upper case three-letter code
     """
-    r = r.upper()
+    res = res.upper()
     rid = ''
-    if r in three_letter_residue_code.keys():
-        rid = three_letter_residue_code[r]
-    elif r in one_letter_residue_code.keys():
-        rid = r
+    if res in THREE_LETTER_RESIDUE_CODE.keys():
+        rid = THREE_LETTER_RESIDUE_CODE[res]
+    elif res in ONE_LETTER_RESIDUE_CODE.keys():
+        rid = res
     else:
-        print ('#ERROR: unknown residue id ' + r)
+        print('#ERROR: unknown residue id ', res)
         sys.exit(1)
 
     return rid
 
-def same_residue (at1, at2):
+def same_residue(at1, at2):
     """
     Checks whether atoms belong to the same residue
     """
     return at1.get_parent() == at2.get_parent()
 
-def same_model(r1, r2):
+def same_model(res1, res2):
     """
     Checks whether residues belong to the same model
     """
-    return r1.get_parent().get_parent() == r2.get_parent().get_parent()
+    return res1.get_parent().get_parent() == res2.get_parent().get_parent()
 
-def same_chain(r1, r2):
+def same_chain(res1, res2):
     """
     Checks whether residues belong to the same chain
     """
-    return (r1.get_parent() == r2.get_parent()) and same_model(r1, r2)
+    return (res1.get_parent() == res2.get_parent()) and same_model(res1, res2)
 
-def seq_consecutive(r1, r2):
+def seq_consecutive(res1, res2):
     """
     Checks whether residues belong to the same chain and are consecutive in sequences,
     taken from residue number
     """
-    resnum1 = r1.id[1]
-    resnum2 = r2.id[1]
-    return same_chain(r1, r2) and abs(resnum1-resnum2) == 1
+    rnum1 = res1.id[1]
+    rnum2 = res2.id[1]
+    return same_chain(res1, res2) and abs(rnum1 - rnum2) == 1
 
-def is_wat(r):
+def is_wat(res):
     """
     Shortcut to check for water residues
     """
-    return r.id[0] == 'W'
+    return res.id[0].startswith('W')
 
-def is_hetatm(r):
+def is_hetatm(res):
     """
     Shortcut to check for HETATM residues
     """
-    return r.id[0][0:2] == 'H_' or 'W' == r.id[0]
+    return res.id[0].startswith('H_') or res.id[0].startswith('W')
 
-def is_at_in_list(at, at_list, rname=None):
+def is_at_in_list(atm, at_list, rname=None):
     """Checks if **at is in **at_list in the context of **rname residue
     """
     if rname is None:
-        rname = at.get_parent().get_resname().replace(' ', '')
+        rname = atm.get_parent().get_resname().replace(' ', '')
     if rname in at_list:
-        return at.id in at_list[rname] or at.id in at_list['*']
-    else:
-        return at.id in at_list['*']
+        return atm.id in at_list[rname] or atm.id in at_list['*']
+    return atm.id in at_list['*']
 
-def has_ins_code(r):
+def has_ins_code(res):
     """Checks whether residue **r has insertion code
     """
-    return r.id[2] != ' '
+    return res.id[2] != ' '
 
 #===============================================================================
 # Guesses
 
-def guess_models_type(st, threshold=MODELS_MAXRMS):
+def guess_models_type(struc, threshold=MODELS_MAXRMS):
     """Guesses the type of models according to all atom RMSd of first 2 models
        Considers Ensembl/NMR if rmsd value is less than **threshold
     """
-    if len(st) == 1:
+    if len(struc) == 1:
         return 0
-    rmsd = calc_RMSd_all_ats(st[0], st[1])
-    rmsd = round(rmsd,4)
-    if len(st) > 1:
-        if rmsd < threshold:
-            return {'type':ENSM, 'rmsd':rmsd}
-        else:
-            return {'type':BUNIT, 'rmsd':rmsd}
-    else:
-        return {'type':UNKNOWN, 'rmsd':rmsd}
+    rmsd = calc_RMSd_all_ats(struc[0], struc[1])
+    rmsd = round(rmsd, 4)
+    if rmsd < threshold:
+        return {'type':ENSM, 'rmsd':rmsd}
+    return {'type':BUNIT, 'rmsd':rmsd}
 
-def guess_chain_type(ch, thres=SEQ_THRESHOLD):
+def guess_chain_type(chn, thres=SEQ_THRESHOLD):
     """
     Guesses chain type (protein, dna, or rna) from residue composition
     Allow for non-std residues.
@@ -192,16 +185,16 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
     dna = 0.
     rna = 0.
     total = 0.
-    for r in ch.get_residues():
+    for res in chn.get_residues():
         total += 1
-        if is_wat(r):
+        if is_wat(res):
             continue
-        rname = r.get_resname().replace(' ', '')
-        if rname in three_letter_residue_code.values():
+        rname = res.get_resname().replace(' ', '')
+        if rname in THREE_LETTER_RESIDUE_CODE.values():
             prot += 1
-        elif rname in dna_residue_code:
+        elif rname in DNA_RESIDUE_CODE:
             dna += 1
-        elif rname in rna_residue_code:
+        elif rname in RNA_RESIDUE_CODE:
             rna += 1
     prot = prot / total
     dna = dna / total
@@ -213,29 +206,27 @@ def guess_chain_type(ch, thres=SEQ_THRESHOLD):
         return DNA
     elif rna > thres or rna > prot + dna:
         return RNA
-    else:
-        return [prot, dna, rna, other]
+    return [prot, dna, rna, other]
 
 #===============================================================================
-
-def check_chiral_residue(r, chiral_data):
+def check_chiral_residue(res, chiral_data):
     """
-    Checks proper chirality of side chain atoms as defined in
-    chiral_data
+        Checks proper chirality of side chain atoms as defined in
+        chiral_data
     """
-    ok = True
-    if r.get_resname() in chiral_data:
-        atids = chiral_data[r.get_resname()]
-        ok = check_chiral(r, 'CB', 'CA', atids[0], atids[1], -1.)
-    return ok
+    chi_ok = True
+    if res.get_resname() in chiral_data:
+        at_ids = chiral_data[res.get_resname()]
+        chi_ok = check_chiral(res, 'CB', 'CA', at_ids[0], at_ids[1], -1.)
+    return chi_ok
 
-def check_chiral_ca(r):
+def check_chiral_ca(res):
     """
     Checks proper (L) quirality of CB atom with respect to backbone
     """
-    return r.get_resname() == 'GLY' or check_chiral(r, 'N', 'CA', 'C', 'CB')
+    return res.get_resname() == 'GLY' or check_chiral(res, 'N', 'CA', 'C', 'CB')
 
-def check_chiral(r, at1, at2, at3, at4, sign=1.):
+def check_chiral(res, at1, at2, at3, at4, sign=1.):
     """
     Checks proper chirality of at2 atom.
     at1-at3 define reference plane.
@@ -245,71 +236,77 @@ def check_chiral(r, at1, at2, at3, at4, sign=1.):
     # check all atoms are present
     at_ok = True
     chi_ok = True
-    for at in [at1, at2, at3, at4]:
-        at_ok = at_ok and at in r
+    for atm in [at1, at2, at3, at4]:
+        at_ok = at_ok and atm in res
         if not at_ok:
-            print ('Warning: atom {:3} not found in {}'.format(at, residue_id(r)),file=sys.stderr)
+            print(
+                'Warning: atom {:3} not found in {}'.format(
+                    atm, residue_id(res)
+                ), file=sys.stderr
+            )
     if at_ok:
-        v1 = r[at1].coord-r[at2].coord
-        v2 = r[at3].coord-r[at2].coord
-        vp = np.cross(v1, v2)
-        v3 = r[at4].coord-r[at2].coord
-        chi_ok = sign * (_calc_v_angle(vp, v3) - 90.) < 0.
+        vec1 = res[at1].coord - res[at2].coord
+        vec2 = res[at3].coord - res[at2].coord
+        vecp = np.cross(vec1, vec2)
+        vec3 = res[at4].coord - res[at2].coord
+        chi_ok = sign * (_calc_v_angle(vecp, vec3) - 90.) < 0.
     return chi_ok
 
-def check_all_at_in_r(r, at_list):
+def check_all_at_in_r(res, at_list):
+    """ Check whether all residue atoms are present. """
     miss_at = {}
     for group in ['backbone', 'side']:
         miss_at[group] = []
         for at_id in at_list[group]:
-            if not at_id in r:
+            if not at_id in res:
                 miss_at[group].append(at_id)
-    if len(miss_at['backbone'] + miss_at['side']) > 0:
+    if miss_at['backbone'] + miss_at['side']:
         return miss_at
-    else:
-        return {}
+    return {}
 
-def check_r_list_clashes(r_list, rr_list, CLASH_DIST, atom_lists, join_models=True):
+def check_r_list_clashes(r_list, rr_list, clash_dist, atom_lists, join_models=True):
+    """ Check clashes generated by a list of residues """
     clash_list = {'severe':{}}
     for cls in atom_lists:
         clash_list[cls] = {}
     for r_pair in rr_list:
-        [r1, r2, d] = r_pair
+        [res1, res2] = r_pair[0:2]
 
-        if (r1 in r_list or r2 in r_list) and not is_wat(r1) and not is_wat(r2):
-            c_list = check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models)
-            rkey = residue_id(r1) + '-' + residue_id(r2)
+        if (res1 in r_list or res2 in r_list) and not is_wat(res1) and not is_wat(res2):
+            c_list = check_rr_clashes(res1, res2, clash_dist, atom_lists, join_models)
+            rkey = residue_id(res1) + '-' + residue_id(res2)
             for cls in c_list:
-                if len(c_list[cls]):
+                if c_list[cls]:
                     clash_list[cls][rkey] = c_list[cls]
     return clash_list
 
-def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models=True):
+def check_rr_clashes(res1, res2, clash_dist, atom_lists, join_models=True):
+    """ Check all clashes between two residues """
     clash_list = {}
     min_dist2 = {}
-    CLASH_DIST2 = {}
+    clash_dist2 = {}
     ats_list1 = {}
     ats_list2 = {}
     for cls in atom_lists:
         clash_list[cls] = []
         min_dist2[cls] = 99999.
-        CLASH_DIST2[cls] = CLASH_DIST[cls]**2
-        ats_list1[cls]=set()
-        ats_list2[cls]=set()
-    for at in r1.get_atoms():
+        clash_dist2[cls] = clash_dist[cls]**2
+        ats_list1[cls] = set()
+        ats_list2[cls] = set()
+    for atm in res1.get_atoms():
         for cls in atom_lists:
-            if is_at_in_list(at,atom_lists[cls], r1.get_resname()):
-                ats_list1[cls].add(at.id)
-    for at in r2.get_atoms():
+            if is_at_in_list(atm, atom_lists[cls], res1.get_resname()):
+                ats_list1[cls].add(atm.id)
+    for atm in res2.get_atoms():
         for cls in atom_lists:
-            if is_at_in_list(at,atom_lists[cls], r2.get_resname()):
-                ats_list2[cls].add(at.id)
+            if is_at_in_list(atm, atom_lists[cls], res2.get_resname()):
+                ats_list2[cls].add(atm.id)
 
-    if r1 != r2 and not seq_consecutive(r1, r2) \
-                and (join_models or same_model(r1, r2)):
-        for at_pair in get_all_rr_distances(r1, r2):
+    if res1 != res2 and not seq_consecutive(res1, res2) \
+                and (join_models or same_model(res1, res2)):
+        for at_pair in get_all_rr_distances(res1, res2):
             [at1, at2, dist2] = at_pair
-            if 'severe' in atom_lists and dist2 < CLASH_DIST2['severe']:
+            if 'severe' in atom_lists and dist2 < clash_dist2['severe']:
                 if dist2 < min_dist2:
                     clash_list['severe'] = at_pair
                     min_dist2['severe'] = dist2
@@ -318,119 +315,118 @@ def check_rr_clashes(r1, r2, CLASH_DIST, atom_lists, join_models=True):
                     if cls == 'apolar':
                         #Only one of the atoms should be apolar
                         if not at1.id in ats_list1[cls] and \
-                           not at2.id in ats_list2[cls]:
+                                not at2.id in ats_list2[cls]:
                             continue
                         #Remove n->n+2 backbone clashes. TODO Improve
-                        if abs(r1.index - r2.index) <= 2:
+                        if abs(res1.index - res2.index) <= 2:
                             continue
                         #Remove Ca2+ looking like backbone CA's
-                        if at1.id == 'CA' and is_hetatm(r1) or \
-                           at2.id == 'CA' and is_hetatm(r2):
-                           continue
+                        if at1.id == 'CA' and is_hetatm(res1) or \
+                                at2.id == 'CA' and is_hetatm(res2):
+                            continue
                     else:
                         # Both atoms should be of the same kind
                         if not at1.id in ats_list1[cls] or \
-                           not at2.id in ats_list2[cls]:
+                                not at2.id in ats_list2[cls]:
                             continue
-                    if dist2 < CLASH_DIST2[cls]:
+                    if dist2 < clash_dist2[cls]:
                         if dist2 < min_dist2[cls]:
                             clash_list[cls] = at_pair
                             min_dist2[cls] = dist2
     return clash_list
 
 #===============================================================================
-def get_altloc_residues(st):
+def get_altloc_residues(struc):
     """ Gets list of residue  with atoms with alternative location labels
     """
     res_list = {}
-    for r in st.get_residues():
-        for at in r.get_atoms():
-#        r = at.get_parent()
-           if at.get_altloc() != ' ':
-                if r not in res_list:
-                    res_list[r] = []
-                res_list[r].append(at)
+    for res in struc.get_residues():
+        for atm in res.get_atoms():
+            if atm.get_altloc() != ' ':
+                if res not in res_list:
+                    res_list[res] = []
+                res_list[res].append(atm)
     return res_list
 
-def get_metal_atoms(st, metal_ats):
+def get_metal_atoms(struc, metal_ats):
     """
     Gets list of metal atoms
 
     """
     met_list = []
-    for at in st.get_atoms():
-        if not re.match('H_', at.get_parent().id[0]):
+    for atm in struc.get_atoms():
+        if not re.match('H_', atm.get_parent().id[0]):
             continue
-        if at.id in metal_ats:
-            met_list.append(at)
+        if atm.id in metal_ats:
+            met_list.append(atm)
     return met_list
 
-def get_ligands(st, incl_water=False):
+def get_ligands(struc, incl_water=False):
     """
     Gets lists of ligands, water molecules can be excluded
     """
     lig_list = []
-    for r in st.get_residues():
-        if re.match('H_', r.id[0]) or (incl_water and re.match('W', r.id[0])):
-            lig_list.append(r)
+    for res in struc.get_residues():
+        if is_hetatm(res) and (incl_water or not is_wat(res)):
+            lig_list.append(res)
     return lig_list
 
-def get_residues_with_H(st):
-    """
-    Get residues containing Hydrogen atoms
-
+def get_residues_with_H(struc):
+    """ Get residues containing Hydrogen atoms
     """
     resh_list = []
-    for r in st.get_residues():
+    for res in struc.get_residues():
         has_h = 0
-        for a in r.get_atoms():
-            if a.element == 'H':
+        for atm in res.get_atoms():
+            if atm.element == 'H':
                 has_h += 1
         if has_h:
-            resh_list.append({'r':r, 'n_h':has_h})
+            resh_list.append({'r':res, 'n_h':has_h})
     return resh_list
 
 
-def get_backbone_links(st, backbone_atoms, COVLNK, join_models=True): #TODO differenciate Protein and NA
+def get_backbone_links(struc, backbone_atoms, covlnk, join_models=True):
+    """ Get links making the main chain """
+    #TODO differenciate Protein and NA
     cov_links = []
-    for m in st:
+    for mod in struc:
         bckats = []
-        for at in st[m.id].get_atoms():
-            if at.id in backbone_atoms:
-                if at.disordered_flag:
-                    bckats.append(at.selected_child)
+        for atm in struc[mod.id].get_atoms():
+            if atm.id in backbone_atoms:
+                if atm.disordered_flag:
+                    bckats.append(atm.selected_child)
                 else:
-                    bckats.append(at)
+                    bckats.append(atm)
         if bckats:
             nbsearch = NeighborSearch(bckats)
-            for at1, at2 in nbsearch.search_all(COVLNK):
+            for at1, at2 in nbsearch.search_all(covlnk):
                 if not same_residue(at1, at2) \
-                   and (join_models or same_model(at1.get_parent(),at2.get_parent())):
+                        and (join_models or same_model(at1.get_parent(), at2.get_parent())):
                     cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
-            print ("Warning: No backbone atoms defined", file=sys.stderr)
+            print("Warning: No backbone atoms defined", file=sys.stderr)
 
     return cov_links
 
 # Residue manipulation =======================================================
-def remove_H_from_r (r, verbose=False):
+def remove_H_from_r(res, verbose=False):
     """
     Removes Hydrogen atoms from given residue
     """
-    H_list = []
-    for at in r.get_atoms():
-        if at.element == 'H':
-            H_list.append(at.id)
-    for at_id in H_list:
+    h_list = []
+    for atm in res.get_atoms():
+        if atm.element == 'H':
+            h_list.append(atm.id)
+    for at_id in h_list:
         if verbose:
-            print ("  Deleting atom " + at_id)
-        r.detach_child(at_id)
+            print("  Deleting atom " + at_id)
+        res.detach_child(at_id)
 
-def remove_residue(r):
+def remove_residue(res):
     """
     Removes residue completely
     """
-    r.get_parent().detach_child(r.id)
+    res.get_parent().detach_child(res.id)
 
 def swap_atoms(at1, at2):
     """
@@ -454,132 +450,127 @@ def swap_atoms(at1, at2):
     at2.name = at1_name
     at2.fullname = at1_fullname
 
-def invert_side_atoms(r, res_data): #TODO check merging with swat_atom_names
+def invert_side_atoms(res, res_data):
     """
      Swaps atoms according to res_data. Useful for fixing amides and chirality issues
     """
+    #TODO check merging with swat_atom_names
     #TODO reconstruct CD1 atom in Ile
-    res_type = r.get_resname()
+    res_type = res.get_resname()
     if not res_type in res_data:
         sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
-    swap_atoms(r[res_data[res_type][0]], r[res_data[res_type][1]])
+    swap_atoms(res[res_data[res_type][0]], res[res_data[res_type][1]])
 
-def invert_chirality (r, at1, at2, at3, at4):
+def invert_chirality(res, at1, at2, at3, at4):
     """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
     """
     #TODO
-    pass
 
-def invert_chiral_ca(r):
+def invert_chiral_ca(res):
     """
      Inverts CA Chirality.
     """
     #TODO
-    return None
-
+    
 # Atom management ==============================================================
-def rename_atom(r, old_at, new_at):
-    at = r[old_at]
-    r.detach_child(at.id)
-    at.id = new_at
-    at.full_id = new_at
-    at.element = new_at[0:1]
-    at.fullname = ' ' + new_at
-    r.add(at)
+def rename_atom(res, old_at, new_at):
+    atm = res[old_at]
+    res.detach_child(atm.id)
+    atm.id = new_at
+    atm.full_id = new_at
+    atm.element = new_at[0:1]
+    atm.fullname = ' ' + new_at
+    res.add(atm)
 
-def delete_atom(r, at_id):
-    r.detach_child(at_id)
+def delete_atom(res, at_id):
+    res.detach_child(at_id)
 
-
-def build_atom(r, at_id, res_lib, new_res_id):
+def build_atom(res, at_id, res_lib, new_res_id):
     if at_id == 'CB':
-        coords = build_coords_CB(r)
+        coords = build_coords_CB(res)
     else:
-        coords = build_coords_from_lib(r, res_lib, new_res_id, at_id)
-    add_new_atom_to_residue(r,at_id,coords)
+        coords = build_coords_from_lib(res, res_lib, new_res_id, at_id)
+    add_new_atom_to_residue(res, at_id, coords)
 
-def add_new_atom_to_residue(r, at_id, coords):
-    r.add(Atom(at_id,coords,99.0,1.0,' ',' ' + at_id + ' ',0,at_id[0:1]))
+def add_new_atom_to_residue(res, at_id, coords):
+    res.add(Atom(at_id, coords, 99.0, 1.0, ' ', ' ' + at_id + ' ', 0, at_id[0:1]))
 
-def build_coords_from_lib(r, res_lib, new_res, at_id):
+def build_coords_from_lib(res, res_lib, new_res, at_id):
     """
      Calculates cartesian coordinates for a new atom from internal coordinates definition.
 
     """
     atom_def = res_lib.get_atom_def(new_res, at_id)
-    if atom_def == None:
-        print ("#ERROR: Unknown target atom")
+    if atom_def is None:
+        print("#ERROR: Unknown target atom")
         sys.exit(1)
 
     return build_coords_from_ats_internal(
-            r[atom_def.link_ats[0]],
-            r[atom_def.link_ats[1]],
-            r[atom_def.link_ats[2]],
-             atom_def.geom
-        )
+        res[atom_def.link_ats[0]],
+        res[atom_def.link_ats[1]],
+        res[atom_def.link_ats[2]],
+        atom_def.geom
+    )
 
-
-def build_coords_CB(r): # Get CB from Backbone
+def build_coords_CB(res): # Get CB from Backbone
     """
      Calculates cartesian coordinates for a new CB atom from backbone.
 
     """
-    return build_coords_from_ats_internal(r['CA'],r['N'],r['C'],CBINTERNALS)
+    return build_coords_from_ats_internal(res['CA'], res['N'], res['C'], CBINTERNALS)
 
-def build_coords_O(r): # Get O from Backbone
+def build_coords_O(res): # Get O from Backbone
     """
      Calculates cartesian coordinates for a new O atom from backbone.
 
     """
-    return build_coords_from_ats_internal(r['C'],r['CA'],r['N'],OINTERNALS
-                       )
+    return build_coords_from_ats_internal(res['C'], res['CA'], res['N'], OINTERNALS)
 
-def build_coords_3xSP3(dst,at,at1,at2):
+def build_coords_3xSP3(dst, at0, at1, at2):
     """
         Generates coordinates for 3 SP3 atoms
         **dst** bond distance
-        **at**  central atom
+        **at0**  central atom
         **at1** atom to define bond angles
         **at2** atom to define dihedrals
     """
     #TODO try a pure geometrical generation to avoid at2
-    crs=[]
-    for i in range(0,3):
-        crs.append(build_coords_from_ats_internal(at,at1,at2,[dst,SP3ANGLE,SP3DIHS[i]]))
+    crs = []
+    for i in range(0, 3):
+        crs.append(build_coords_from_ats_internal(at0, at1, at2, [dst, SP3ANGLE, SP3DIHS[i]]))
     return crs
 
-
-def build_coords_2xSP3(dst,at,at1,at2):
+def build_coords_2xSP3(dst, at0, at1, at2):
     """
         Generates coordinates for two SP3 bonds given the other two
         **dst** Bond distance
-        **at** Central atom
+        **at0** Central atom
         **at1** atom with existing bond
         **at2** atom with existing bond
     """
-    cr0 = Vector(at.get_coord())
+    cr0 = Vector(at0.get_coord())
     cr1 = Vector(at1.get_coord())
     cr2 = Vector(at2.get_coord())
-    axe = cr0-cr1
-    m = rotaxis(120.*pi/180., axe)
-    bond = cr2-cr0
+    axe = cr0 - cr1
+    mat = rotaxis(120.*pi/180., axe)
+    bond = cr2 - cr0
     bond.normalize()
-    bond._ar= bond._ar * dst
-    cr3=cr0+bond.left_multiply(m)
-    cr4=cr0+bond.left_multiply(m).left_multiply(m)
-    crs=[]
+    bond._ar = bond._ar * dst
+    cr3 = cr0 + bond.left_multiply(mat)
+    cr4 = cr0 + bond.left_multiply(mat).left_multiply(mat)
+    crs = []
     crs.append(cr3._ar)
     crs.append(cr4._ar)
     return crs
 
-def build_coords_1xSP3(dst, at, at1, at2, at3):
+def build_coords_1xSP3(dst, at0, at1, at2, at3):
     """
       Calculated cartesian coordinates to complete a SP3 group
     """
-    cr0=at.get_coord()
-    cr1=at1.get_coord()
-    cr2=at2.get_coord()
-    cr3=at3.get_coord()
+    cr0 = at0.get_coord()
+    cr1 = at1.get_coord()
+    cr2 = at2.get_coord()
+    cr3 = at3.get_coord()
     avg = cr1 + cr2
     avg = avg + cr3
     avg /= 3.
@@ -588,11 +579,11 @@ def build_coords_1xSP3(dst, at, at1, at2, at3):
     avec *= dst
     return cr0 + avec
 
-def build_coords_SP2(dst, at, at1, at2):
+def build_coords_SP2(dst, at0, at1, at2):
     """
       Calculates cartesian coordinaties to complete a SP2 group
     """
-    cr0 = at.get_coord()
+    cr0 = at0.get_coord()
     cr1 = at1.get_coord()
     cr2 = at2.get_coord()
 
@@ -620,26 +611,26 @@ def build_coords_from_internal(at1c, at2c, at3c, geom):
     ang = geom[1] * pi / 180.
     tor = geom[2] * pi / 180.0
 
-    v1 = at1c-at2c
-    v2 = at1c-at3c
+    vec1 = at1c - at2c
+    vec2 = at1c - at3c
 
-    n = np.cross(v1, v2)
-    nn = np.cross(v1, n)
+    vcr12 = np.cross(vec1, vec2)
+    vcr112 = np.cross(vec1, vcr12)
 
-    n /= norm(n)
-    nn /= norm(nn)
+    vcr12 /= norm(vcr12)
+    vcr112 /= norm(vcr112)
 
-    n *= -sin(tor)
-    nn *= cos(tor)
+    vcr12 *= -sin(tor)
+    vcr112 *= cos(tor)
 
-    v3 = n + nn
-    v3 /= norm(v3)
-    v3 *= dst * sin(ang)
+    vec3 = vcr12 + vcr112
+    vec3 /= norm(vec3)
+    vec3 *= dst * sin(ang)
 
-    v1 /= norm(v1)
-    v1 *= dst * cos(ang)
+    vec1 /= norm(vec1)
+    vec1 *= dst * cos(ang)
 
-    return at1c + v3 - v1
+    return at1c + vec3 - vec1
 
 # Metrics =============================================================
 def calc_at_dist(at1, at2):
@@ -652,32 +643,32 @@ def calc_at_sq_dist(at1, at2):
     """
     Calculates distance between two atoms
     """
-    v = at1.coord-at2.coord
-    return np.dot(v, v)
+    vec = at1.coord - at2.coord
+    return np.dot(vec, vec)
 
 def calc_bond_angle(at1, at2, at3):
     """
     Calculates angle among three atoms at1-at2-at3
     """
-    v1 = at1.coord - at2.coord
-    v2 = at3.coord - at2.coord
-    return _calc_v_angle(v1, v2)
+    vec1 = at1.coord - at2.coord
+    vec2 = at3.coord - at2.coord
+    return _calc_v_angle(vec1, vec2)
 
 def calc_bond_dihedral(at1, at2, at3, at4):
     """
     Calculates dihedral angles at1-at2-at3-at4
     """
-    ab = at1.coord-at2.coord
-    cb = at3.coord-at2.coord
-    db = at4.coord-at3.coord
-    u = np.cross(ab, cb)
-    v = np.cross(db, cb)
-    w = np.cross(u, v)
-    angle_uv = _calc_v_angle(u, v)
-    if norm(w)== 0.:
+    abv = at1.coord - at2.coord
+    cbv = at3.coord - at2.coord
+    dbv = at4.coord - at3.coord
+    uvec = np.cross(abv, cbv)
+    vvec = np.cross(dbv, cbv)
+    wvec = np.cross(uvec, vvec)
+    angle_uv = _calc_v_angle(uvec, vvec)
+    if norm(wvec) == 0.:
         angle_cbw = 0.
     else:
-        angle_cbw = _calc_v_angle(cb, w)
+        angle_cbw = _calc_v_angle(cbv, wvec)
     try:
         if angle_cbw > 0.001:
             angle_uv = -angle_uv
@@ -685,7 +676,7 @@ def calc_bond_dihedral(at1, at2, at3, at4):
         pass
     return angle_uv
 
-def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., join_models=False):
+def get_all_at2at_distances(struc, at_ids='all', d_cutoff=0., join_models=False):
     """
     Gets a list of all at-at distances below a cutoff, at ids can be limited
     """
@@ -695,89 +686,85 @@ def get_all_at2at_distances(st, at_ids='all', d_cutoff=0., join_models=False):
     dist_mat = []
     at_list = []
     d_cut2 = d_cutoff**2
-    for at in st.get_atoms():
-        if at.id in at_ids or at_ids == ['all']:
-            at_list.append(at)
+    for atm in struc.get_atoms():
+        if atm.id in at_ids or at_ids == ['all']:
+            at_list.append(atm)
     for i in range(len(at_list)-1):
         for j in range(i + 1, len(at_list)):
             if join_models or same_model(at_list[i].get_parent(), at_list[j].get_parent()):
-                d = calc_at_sq_dist(at_list[i], at_list[j])
-                if d_cutoff > 0. and d < d_cut2:
-                    dist_mat.append ([at_list[i], at_list[j], d])
+                dist2 = calc_at_sq_dist(at_list[i], at_list[j])
+                if d_cutoff > 0. and dist2 < d_cut2:
+                    dist_mat.append([at_list[i], at_list[j], dist2])
     return dist_mat
 
 
-def get_all_r2r_distances(st, r_ids='all', d_cutoff=0., join_models=False):
+def get_all_r2r_distances(struc, r_ids='all', d_cutoff=0., join_models=False):
     # Uses distances between the first atom of each residue as r-r distance
     if not isinstance(r_ids, list):
         r_ids = r_ids.split(',')
     dist_mat = []
-    check_ats={}
-    for md_id in range(len(st)):
-        check_ats[md_id]=[]
-        for r in st[md_id].get_residues():
-            if r.resname in r_ids or r_ids == ['all']:
+    check_ats = {}
+    for md_id in range(len(struc)):
+        check_ats[md_id] = []
+        for res in struc[md_id].get_residues():
+            if res.resname in r_ids or r_ids == ['all']:
                 if join_models:
-                    check_ats[0].append(r.child_list[0])
+                    check_ats[0].append(res.child_list[0])
                 else:
-                    check_ats[md_id].append(r.child_list[0])
-    for md_id in range(len(st)):
-        if len(check_ats[md_id]):
-            dist_mat += _get_contacts(check_ats[md_id],d_cutoff)
+                    check_ats[md_id].append(res.child_list[0])
+    for md_id in range(len(struc)):
+        if check_ats[md_id]:
+            dist_mat += _get_contacts(check_ats[md_id], d_cutoff)
     return dist_mat
 
-
-def _get_contacts(ats_list,d_cutoff):
-    contact_list=[]
+def _get_contacts(ats_list, d_cutoff):
+    contact_list = []
     nbsearch = NeighborSearch(ats_list)
     for at1, at2 in nbsearch.search_all(d_cutoff):
-        contact_list.append([at1.get_parent(), at2.get_parent(), at1-at2])
+        contact_list.append([at1.get_parent(), at2.get_parent(), at1 - at2])
     return contact_list
 
-
-def calc_RMSd_ats (ats1, ats2):
+def calc_RMSd_ats(ats1, ats2):
     if len(ats1) != len(ats2):
-        print ("Warning: atom lists of different length when calculating RMSd ({}, {})".format(len(ats1),len(ats2)), file=sys.stderr)
+        print(
+            "Warning: atom lists of different length when calculating RMSd ({}, {})".format(
+                len(ats1), len(ats2)
+            ), file=sys.stderr
+        )
     rmsd = 0
     i = 0
     while i < len(ats1) and i < len(ats2):
-        d2 = calc_at_sq_dist(ats1[i], ats2[i])
-        rmsd = rmsd + d2
+        dist2 = calc_at_sq_dist(ats1[i], ats2[i])
+        rmsd = rmsd + dist2
         i = i + 1
 
-    return (sqrt(rmsd / i))
+    return sqrt(rmsd / i)
 
-def calc_RMSd_all_ats (st1, st2):
+def calc_RMSd_all_ats(st1, st2):
     ats1 = []
     ats2 = []
 
-    for at in st1.get_atoms():
-        ats1.append(at)
-    for at in st2.get_atoms():
-        ats2.append(at)
+    for atm in st1.get_atoms():
+        ats1.append(atm)
+    for atm in st2.get_atoms():
+        ats2.append(atm)
 
     return calc_RMSd_ats(ats1, ats2)
 
-def get_all_rr_distances(r1, r2, with_h=False):
+def get_all_rr_distances(res1, res2, with_h=False):
     dist_mat = []
-    for at1 in r1.get_atoms():
+    for at1 in res1.get_atoms():
         if at1.element == 'H' and not with_h:
             continue
-        for at2 in r2.get_atoms():
+        for at2 in res2.get_atoms():
             if at2.element == 'H' and not with_h:
                 continue
-            d2 = calc_at_sq_dist(at1,at2)
-#            if at1.serial_number < at2.serial_number:
-            dist_mat.append ([at1, at2, d2])
-#            else:
-#                dist_mat.append ([at2, at1, d2])
+            dist2 = calc_at_sq_dist(at1, at2)
+            dist_mat.append([at1, at2, dist2])
     return dist_mat
-
-
 #===============================================================================
-def _calc_v_angle(v1, v2, deg=True):
-    angle = arccos(clip(dot(v1, v2) / norm(v1)/norm(v2),-1.,1.))
+def _calc_v_angle(vec1, vec2, deg=True):
+    angle = arccos(clip(dot(vec1, vec2)/norm(vec1)/norm(vec2), -1., 1.))
     if deg:
         angle *= 180./pi
     return angle
-
