@@ -79,10 +79,24 @@ class StructureManager():
         self.input_format = ''
         self.model_type = ''
         self.num_ats = 0
+        
         self.nmodels = 0
+        
         self.chain_ids = []
-        self.modified = False
+        self.ins_codes_list = []
+        
+        self.bck_breaks_list = []
+        self.wrong_link_list = []
+        self.not_link_seq_list = []
+        self.modified_residue_list = []
+        self.cis_backbone_list = []
+        self.lowtrans_backbone_list = []
+        
+        self.meta = {}
+                
         self.all_residues = []
+        
+        self.modified = False
         self.biounit = False
         self.file_format = file_format
         if "pdb:"in input_pdb_path:
@@ -390,15 +404,11 @@ class StructureManager():
 
         Args:
             backbone_atoms: atoms to be considered as backbone
-            COVLNK: Distance threshold for a covalent bond
-            check_models: Consider models as independent molecules
+            covlnk: Distance threshold for a covalent bond
 
-        Internal parameters:
-            CISTHRES (20): Max dihedral for cis bonds
-            TRANSTHRES (160): Min dihedral for trans bonds
         """
         backbone_atoms = ['N', 'C']
-        if not hasattr(self, 'backbone_links'):
+        if not self.backbone_links:
             self.backbone_links = mu.get_backbone_links(
                 self.get_structure(), backbone_atoms, covlnk
             )
@@ -488,7 +498,7 @@ class StructureManager():
                 '{} Num. models: {} (type: {}, {:8.3f} A)'.format(
                     prefix,
                     stats['nmodels'],
-                    mu.model_type_labels[stats['models_type']['type']],
+                    mu.MODEL_TYPE_LABELS[stats['models_type']['type']],
                     stats['models_type']['rmsd']
                 )
             )
@@ -501,7 +511,7 @@ class StructureManager():
             else:
                 chids.append(
                     '{}: {}'.format(
-                        ch_id, mu.chain_type_labels[stats['chain_ids'][ch_id]]
+                        ch_id, mu.CHAIN_TYPE_LABELS[stats['chain_ids'][ch_id]]
                     )
                 )
         print('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ', '.join(chids)))
@@ -659,8 +669,7 @@ class StructureManager():
                     print(
                         'Warning: unknown alternative {} in {}'.format(
                             to_fix['select'], mu.atom_id(atm)
-                        ),
-                        file=sys.stderr
+                        )
                     )
                     continue
             newat.disordered_flag = 0
@@ -691,6 +700,7 @@ class StructureManager():
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
             **res_library**: Residue Library as structure_manager.residue_lib_manager.ResidueLib
         """
+        print (mu.residue_id(r_at[0]))
         for at_id in r_at[1]:
             print("  Adding new atom " + at_id)
             if at_id == 'CB':
@@ -715,29 +725,18 @@ class StructureManager():
         [res, at_list] = r_at
         print(mu.residue_id(res))
         if not 'C' in res:
-            print(
-                "Warning: not enough backbone to reconstruct missing atoms on ",
-                mu.residue_id(res),
-                file=sys.stderr
-            )
             print("  Warning: not enough backbone to reconstruct missing atoms")
             return False
         if len(at_list) == 2 or at_list == ['O']:
             if 'CA' not in res or 'N' not in res or 'C' not in res:
-                print(
-                    "Warning: not enough backbone atoms to build O on ",
-                    mu.residue_id(res),
-                    file=sys.stderr
-                )
+                print("  Warning: not enough backbone to reconstruct O atom")
                 return 1
             print("  Adding new atom O")
             mu.add_new_atom_to_residue(res, 'O', mu.build_coords_O(res))
         if 'OXT' in at_list:
             if 'CA' not in res or 'C' not in res or 'O' not in res:
                 print(
-                    "Warning: not enough backbone atoms to build OXT on ",
-                    mu.residue_id(res),
-                    file=sys.stderr
+                    "Warning: not enough backbone atoms to build OXT atom",
                 )
                 return False
             print("  Adding new atom OXT")
@@ -764,164 +763,58 @@ class StructureManager():
         if remove_h:
             for res in self.all_residues:
                 mu.remove_H_from_r(res, verbose=False)
+        
         # residues with alternative forms
         for r_at in r_at_list:
             [res, opt] = r_at
+
+            if mu.is_hetatm(res):
+                continue
         # Skip residues without addH rules
             if res.get_resname() not in addH_rules:
                 print(
-                    "Warning: addH rules not available for residue type ",
-                    res.get_resname(),
-                    file=sys.stderr
+                    "Warning: add side chain hydrogens not implemented for residue ",
+                    res.get_resname()
                 )
-                continue
-            if mu.is_hetatm(res):
+                done_side.add(res)
                 continue
             rcode = res.get_resname()
-            self.add_hydrogens_side(res, res_library, opt, addH_rules[rcode][opt])
+            error_msg = mu.add_hydrogens_side(res, res_library, opt, addH_rules[rcode][opt])
+            if error_msg:
+                print(error_msg, mu.residue_id(res))
             res.resname = opt
             done_side.add(res)
 
         for res in self.all_residues:
             if mu.is_hetatm(res):
                 continue
+
             rcode = res.get_resname()
+        
             if res not in self.prev_residue:
                 prev_residue = None
             else:
                 prev_residue = self.prev_residue[res]
-            self.add_hydrogens_backbone(res, prev_residue)
+
+            error_msg = mu.add_hydrogens_backbone(res, prev_residue)
+            if error_msg:
+                print(error_msg, mu.residue_id(res))
 
             if res not in done_side and rcode != 'GLY':
                 if rcode not in addH_rules:
                     print(
-                        "Warning: addH rules not available for residue type ",
-                        rcode,
-                        file=sys.stderr
+                        "Warning: add side chain hydrogens not implemented for residue ",
+                        rcode
                     )
                     continue
-                self.add_hydrogens_side(res, res_library, rcode, addH_rules[rcode])
-
+            
+                error_msg = mu.add_hydrogens_side(res, res_library, rcode, addH_rules[rcode])
+                if error_msg:
+                    print(error_msg, mu.residue_id(res))
+        
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified = True
-
-    def add_hydrogens_backbone(self, res, res_1):
-        """ Add hydrogen atoms to the backbone"""
-        if 'N' not in res or 'CA' not in res:
-            print(
-                "Warning: not enough atoms to build backbone H(s) on ",
-                mu.residue_id(res),
-                file=sys.stderr
-            )
-            return
-        if res_1 is None:
-            # Nterminal TODO  Neutral NTerm
-            if res.get_resname() == 'PRO':
-                if 'CD' not in res:
-                    print(
-                        "Warning: not enough atoms to build backbone H(s) on ",
-                        mu.residue_id(res),
-                        file=sys.stderr
-                    )
-                    return
-                mu.add_new_atom_to_residue(
-                    res,
-                    'H',
-                    mu.build_coords_SP2(1.08, res['N'], res['CA'], res['CD'])
-                )
-            else:
-                if 'C' not in res:
-                    print(
-                        "Warning: not enough atoms to build backbone H(s) on ",
-                        mu.residue_id(res),
-                        file=sys.stderr
-                    )
-                    return
-                crs = mu.build_coords_3xSP3(1.010, res['N'], res['CA'], res['C'])
-                mu.add_new_atom_to_residue(res, 'H1', crs[0])
-                mu.add_new_atom_to_residue(res, 'H2', crs[1])
-                mu.add_new_atom_to_residue(res, 'H3', crs[2])
-        elif res.get_resname() != 'PRO':
-            if 'C' not in res_1:
-                print(
-                    "Warning: not enough atoms to build backbone H(s) on ",
-                    mu.residue_id(res),
-                    file=sys.stderr
-                )
-                return
-            mu.add_new_atom_to_residue(
-                res,
-                'H',
-                mu.build_coords_SP2(1.08, res['N'], res['CA'], res_1['C'])
-            )
-
-        if res.get_resname() == 'GLY':
-            if 'C' not in res:
-                print(
-                    "Warning: not enough atoms to build backbone H(s) on ",
-                    mu.residue_id(res),
-                    file=sys.stderr
-                )
-                return
-            crs = mu.build_coords_2xSP3(1.010, res['CA'], res['N'], res['C'])
-            mu.add_new_atom_to_residue(res, 'HA2', crs[0])
-            mu.add_new_atom_to_residue(res, 'HA3', crs[1])
-        else:
-            if 'C' not in res or 'CB' not in res:
-                print(
-                    "Warning: not enough atoms to build H on ",
-                    mu.residue_id(res),
-                    file=sys.stderr
-                )
-                return
-            mu.add_new_atom_to_residue(
-                res,
-                'HA',
-                mu.build_coords_1xSP3(1.08, res['CA'], res['N'], res['C'], res['CB'])
-            )
-
-    def add_hydrogens_side(self, res, res_library, opt, rules):
-        """ Add hydrogens to side chains"""
-        if 'N' not in res or 'CA' not in res or 'C' not in res:
-            print(
-                "Warning: Incomplete backbone in ",
-                mu.residue_id(res),
-                file=sys.stderr
-            )
-            return        
-        for key_rule in rules.keys():
-            rule = rules[key_rule]
-            if rule['mode'] == 'B2':
-                crs = mu.build_coords_2xSP3(
-                    rule['dist'],
-                    res[key_rule],
-                    res[rule['ref_ats'][0]],
-                    res[rule['ref_ats'][1]]
-                )
-                mu.add_new_atom_to_residue(res, rule['ats'][0], crs[0])
-                mu.add_new_atom_to_residue(res, rule['ats'][1], crs[1])
-            elif rule['mode'] == "B1":
-                crs = mu.build_coords_1xSP3(
-                    rule['dist'],
-                    res[key_rule],
-                    res[rule['ref_ats'][0]],
-                    res[rule['ref_ats'][1]],
-                    res[rule['ref_ats'][2]]
-                )
-                mu.add_new_atom_to_residue(res, rule['ats'][0], crs)
-            elif rule['mode'] == 'S2':
-                crs = mu.build_coords_SP2(
-                    rule['dist'],
-                    res[key_rule],
-                    res[rule['ref_ats'][0]],
-                    res[rule['ref_ats'][1]],
-                )
-                mu.add_new_atom_to_residue(res, rule['ats'][0], crs)
-            elif rule['mode'] == 'L':
-                for at_id in rule['ats']:
-                    crs = mu.build_coords_from_lib(res, res_library, opt, at_id)
-                    mu.add_new_atom_to_residue(res, at_id, crs)
 
     def is_N_term(self, res):
         """ Detects whether it is N terminal residue."""

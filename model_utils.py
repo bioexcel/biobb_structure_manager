@@ -102,9 +102,8 @@ def protein_residue_check(res):
     elif res in ONE_LETTER_RESIDUE_CODE.keys():
         rid = res
     else:
-        print('#ERROR: unknown residue id ', res)
-        sys.exit(1)
-
+        return False
+    
     return rid
 
 def same_residue(at1, at2):
@@ -239,11 +238,7 @@ def check_chiral(res, at1, at2, at3, at4, sign=1.):
     for atm in [at1, at2, at3, at4]:
         at_ok = at_ok and atm in res
         if not at_ok:
-            print(
-                'Warning: atom {:3} not found in {}'.format(
-                    atm, residue_id(res)
-                ), file=sys.stderr
-            )
+            print('Warning: atom {:3} not found in {}'.format(atm, residue_id(res)))
     if at_ok:
         vec1 = res[at1].coord - res[at2].coord
         vec2 = res[at3].coord - res[at2].coord
@@ -404,7 +399,7 @@ def get_backbone_links(struc, backbone_atoms, covlnk, join_models=True):
                         and (join_models or same_model(at1.get_parent(), at2.get_parent())):
                     cov_links.append(sorted([at1, at2], key=lambda x: x.serial_number))
         else:
-            print("Warning: No backbone atoms defined", file=sys.stderr)
+            print("Warning: No backbone atoms defined")
 
     return cov_links
 
@@ -485,6 +480,113 @@ def rename_atom(res, old_at, new_at):
 def delete_atom(res, at_id):
     res.detach_child(at_id)
 
+def add_hydrogens_backbone(res, res_1):
+    """ Add hydrogen atoms to the backbone"""
+    
+    # only proteins
+    
+    if not protein_residue_check(res.get_resname()):
+        return "Warning: Add backbone hydrogens not implemented for residue "
+    
+    error_msg = "Warning: not enough atoms to build backbone H atoms on "
+    
+    if 'N' not in res or 'CA' not in res:
+        return error_msg
+    
+    if res_1 is None:
+        # Nterminal TODO  Neutral NTerm
+        if res.get_resname() == 'PRO':
+            if 'CD' not in res:
+                return error_msg
+    
+            add_new_atom_to_residue(
+                res,
+                'H',
+                build_coords_SP2(1.08, res['N'], res['CA'], res['CD'])
+            )
+        else:
+            if 'C' not in res:
+                return error_msg
+            
+            crs = build_coords_3xSP3(1.010, res['N'], res['CA'], res['C'])
+            add_new_atom_to_residue(res, 'H1', crs[0])
+            add_new_atom_to_residue(res, 'H2', crs[1])
+            add_new_atom_to_residue(res, 'H3', crs[2])
+    
+    elif res.get_resname() != 'PRO':
+        if 'C' not in res_1:
+            return error_msg
+    
+        add_new_atom_to_residue(
+            res,
+            'H',
+            build_coords_SP2(1.08, res['N'], res['CA'], res_1['C'])
+        )
+    
+    if res.get_resname() == 'GLY':
+        if 'C' not in res:
+            return error_msg
+    
+        crs = build_coords_2xSP3(1.010, res['CA'], res['N'], res['C'])
+        add_new_atom_to_residue(res, 'HA2', crs[0])
+        add_new_atom_to_residue(res, 'HA3', crs[1])
+    
+    else:
+        if 'C' not in res or 'CB' not in res:
+            return error_msg
+    
+        add_new_atom_to_residue(
+            res,
+            'HA',
+            build_coords_1xSP3(1.08, res['CA'], res['N'], res['C'], res['CB'])
+        )
+
+    return False
+
+    
+
+def add_hydrogens_side(res, res_library, opt, rules):
+    """ Add hydrogens to side chains"""
+    if 'N' not in res or 'CA' not in res or 'C' not in res:
+        return "Warning: not enough atoms to build side chain H atoms on "
+
+    for key_rule in rules.keys():
+        rule = rules[key_rule]
+        if rule['mode'] == 'B2':
+            crs = build_coords_2xSP3(
+                rule['dist'],
+                res[key_rule],
+                res[rule['ref_ats'][0]],
+                res[rule['ref_ats'][1]]
+            )
+            add_new_atom_to_residue(res, rule['ats'][0], crs[0])
+            add_new_atom_to_residue(res, rule['ats'][1], crs[1])
+    
+        elif rule['mode'] == "B1":
+            crs = build_coords_1xSP3(
+                rule['dist'],
+                res[key_rule],
+                res[rule['ref_ats'][0]],
+                res[rule['ref_ats'][1]],
+                res[rule['ref_ats'][2]]
+            )
+            add_new_atom_to_residue(res, rule['ats'][0], crs)
+        
+        elif rule['mode'] == 'S2':
+            crs = build_coords_SP2(
+                rule['dist'],
+                res[key_rule],
+                res[rule['ref_ats'][0]],
+                res[rule['ref_ats'][1]],
+            )
+            add_new_atom_to_residue(res, rule['ats'][0], crs)
+        
+        elif rule['mode'] == 'L':
+            for at_id in rule['ats']:
+                crs = build_coords_from_lib(res, res_library, opt, at_id)
+                add_new_atom_to_residue(res, at_id, crs)
+    return False
+
 def build_atom(res, at_id, res_lib, new_res_id):
     if at_id == 'CB':
         coords = build_coords_CB(res)
@@ -492,8 +594,10 @@ def build_atom(res, at_id, res_lib, new_res_id):
         coords = build_coords_from_lib(res, res_lib, new_res_id, at_id)
     add_new_atom_to_residue(res, at_id, coords)
 
+
 def add_new_atom_to_residue(res, at_id, coords):
     res.add(Atom(at_id, coords, 99.0, 1.0, ' ', ' ' + at_id + ' ', 0, at_id[0:1]))
+
 
 def build_coords_from_lib(res, res_lib, new_res, at_id):
     """
@@ -729,7 +833,7 @@ def calc_RMSd_ats(ats1, ats2):
         print(
             "Warning: atom lists of different length when calculating RMSd ({}, {})".format(
                 len(ats1), len(ats2)
-            ), file=sys.stderr
+            )
         )
     rmsd = 0
     i = 0
