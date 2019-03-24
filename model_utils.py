@@ -103,7 +103,7 @@ def protein_residue_check(res):
         rid = res
     else:
         return False
-    
+
     return rid
 
 def same_residue(at1, at2):
@@ -466,7 +466,7 @@ def invert_chiral_ca(res):
      Inverts CA Chirality.
     """
     #TODO
-    
+
 # Atom management ==============================================================
 def rename_atom(res, old_at, new_at):
     atm = res[old_at]
@@ -482,23 +482,23 @@ def delete_atom(res, at_id):
 
 def add_hydrogens_backbone(res, res_1):
     """ Add hydrogen atoms to the backbone"""
-    
+
     # only proteins
-    
+
     if not protein_residue_check(res.get_resname()):
         return "Warning: Add backbone hydrogens not implemented for residue "
-    
+
     error_msg = "Warning: not enough atoms to build backbone H atoms on "
-    
+
     if 'N' not in res or 'CA' not in res:
         return error_msg
-    
+
     if res_1 is None:
         # Nterminal TODO  Neutral NTerm
         if res.get_resname() == 'PRO':
             if 'CD' not in res:
                 return error_msg
-    
+
             add_new_atom_to_residue(
                 res,
                 'H',
@@ -507,34 +507,34 @@ def add_hydrogens_backbone(res, res_1):
         else:
             if 'C' not in res:
                 return error_msg
-            
+
             crs = build_coords_3xSP3(1.010, res['N'], res['CA'], res['C'])
             add_new_atom_to_residue(res, 'H1', crs[0])
             add_new_atom_to_residue(res, 'H2', crs[1])
             add_new_atom_to_residue(res, 'H3', crs[2])
-    
+
     elif res.get_resname() != 'PRO':
         if 'C' not in res_1:
             return error_msg
-    
+
         add_new_atom_to_residue(
             res,
             'H',
             build_coords_SP2(1.08, res['N'], res['CA'], res_1['C'])
         )
-    
+
     if res.get_resname() == 'GLY':
         if 'C' not in res:
             return error_msg
-    
+
         crs = build_coords_2xSP3(1.010, res['CA'], res['N'], res['C'])
         add_new_atom_to_residue(res, 'HA2', crs[0])
         add_new_atom_to_residue(res, 'HA3', crs[1])
-    
+
     else:
         if 'C' not in res or 'CB' not in res:
             return error_msg
-    
+
         add_new_atom_to_residue(
             res,
             'HA',
@@ -543,7 +543,7 @@ def add_hydrogens_backbone(res, res_1):
 
     return False
 
-    
+
 
 def add_hydrogens_side(res, res_library, opt, rules):
     """ Add hydrogens to side chains"""
@@ -561,7 +561,7 @@ def add_hydrogens_side(res, res_library, opt, rules):
             )
             add_new_atom_to_residue(res, rule['ats'][0], crs[0])
             add_new_atom_to_residue(res, rule['ats'][1], crs[1])
-    
+
         elif rule['mode'] == "B1":
             crs = build_coords_1xSP3(
                 rule['dist'],
@@ -571,7 +571,7 @@ def add_hydrogens_side(res, res_library, opt, rules):
                 res[rule['ref_ats'][2]]
             )
             add_new_atom_to_residue(res, rule['ats'][0], crs)
-        
+
         elif rule['mode'] == 'S2':
             crs = build_coords_SP2(
                 rule['dist'],
@@ -580,7 +580,7 @@ def add_hydrogens_side(res, res_library, opt, rules):
                 res[rule['ref_ats'][1]],
             )
             add_new_atom_to_residue(res, rule['ats'][0], crs)
-        
+
         elif rule['mode'] == 'L':
             for at_id in rule['ats']:
                 crs = build_coords_from_lib(res, res_library, opt, at_id)
