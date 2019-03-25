@@ -11,11 +11,26 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from structure_manager.mmb_server import MMBPDBList
 from structure_manager.mutation_manager import MutationManager
+from structure_manager.data_lib_manager import DataLibManager
+from structure_manager.residue_lib_manager import ResidueLib
 
 import structure_manager.model_utils as mu
 
 CISTHRES = 20  #TODO check vaules with pdb checking
 TRANSTHRES = 160
+
+ALL_CONTACT_TYPES = [
+    'severe',
+    'apolar',
+    'polar_acceptor',
+    'polar_donor',
+    'positive',
+    'negative'
+]
+AMIDE_CONTACT_TYPES = [
+    'polar_acceptor',
+    'polar_donor',
+]
 
 class StructureManager():
     """Main Class wrapping Bio.PDB structure object
@@ -24,7 +39,8 @@ class StructureManager():
     def __init__(
             self,
             input_pdb_path,
-            data_library,
+            data_library_path,
+            res_library_path,
             pdb_server='ftp://ftp.wwpdb.org',
             cache_dir='tmpPDB',
             file_format='mmCif'):
@@ -101,7 +117,9 @@ class StructureManager():
         self.modified = False
         self.biounit = False
         self.file_format = file_format
-        self.data_library = data_library
+        
+        self.data_library = DataLibManager(data_library_path)
+        self.res_library = ResidueLib(res_library_path)
 
         self._load_structure_file(input_pdb_path, cache_dir, pdb_server, file_format)
 
@@ -738,13 +756,12 @@ class StructureManager():
 
         self.modified = True
 
-    def fix_side_chain(self, r_at, res_library):
+    def fix_side_chain(self, r_at):
         """
         Fix missing side chain atoms in given residue. Triggers **modified** flag
 
         Args:
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
-            **res_library**: Residue Library as structure_manager.residue_lib_manager.ResidueLib
         """
         print(mu.residue_id(r_at[0]))
         for at_id in r_at[1]:
@@ -754,7 +771,7 @@ class StructureManager():
             else:
                 coords = mu.build_coords_from_lib(
                     r_at[0],
-                    res_library,
+                    self.res_library,
                     r_at[0].get_resname(),
                     at_id
                 )
@@ -766,7 +783,6 @@ class StructureManager():
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
-            **res_library**: Residue Library as structure_manager.residue_lib_manager.ResidueLib
         """
         [res, at_list] = r_at
         print(mu.residue_id(res))
@@ -796,7 +812,7 @@ class StructureManager():
         self.modified = True
         return True
 
-    def add_hydrogens(self, r_at_list, res_library, remove_h=True):
+    def add_hydrogens(self, r_at_list, remove_h=True):
         """
         Add hydrogens according to selection in r_at_list
 
@@ -827,7 +843,7 @@ class StructureManager():
                 done_side.add(res)
                 continue
             rcode = res.get_resname()
-            error_msg = mu.add_hydrogens_side(res, res_library, opt, addH_rules[rcode][opt])
+            error_msg = mu.add_hydrogens_side(res, self.res_library, opt, addH_rules[rcode][opt])
             if error_msg:
                 print(error_msg, mu.residue_id(res))
             res.resname = opt
@@ -856,14 +872,13 @@ class StructureManager():
                     )
                     continue
 
-                error_msg = mu.add_hydrogens_side(res, res_library, rcode, addH_rules[rcode])
+                error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, addH_rules[rcode])
                 if error_msg:
                     print(error_msg, mu.residue_id(res))
 
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified = True
-
 
     def is_N_term(self, res):
         """ Detects whether it is N terminal residue."""
@@ -878,11 +893,11 @@ class StructureManager():
         mutations.prepare_mutations(self.st)
         return mutations
 
-    def apply_mutations(self, mutations, residue_lib):
+    def apply_mutations(self, mutations):
         mutated_res = mutations.apply_mutations(
             self.st,
             self.data_library.get_mutation_map(),
-            residue_lib
+            self.res_library
         )
         self.residue_renumbering()
         self.atom_renumbering()
