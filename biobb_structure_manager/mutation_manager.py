@@ -4,8 +4,7 @@
 
 import re
 import sys
-
-import structure_manager.model_utils as mu
+import model_utils as mu
 
 ADD = 'Add'
 DEL = 'Del'
@@ -173,4 +172,3 @@ class Mutation():
 
     def __str__(self):
       return self.id
-

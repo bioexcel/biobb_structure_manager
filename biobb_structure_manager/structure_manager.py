@@ -10,9 +10,9 @@ from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.Atom import Atom
 from Bio.PDB.parse_pdb_header import parse_pdb_header
-from structure_manager.mmb_server import MMBPDBList
+from mmb_server import MMBPDBList
 
-import structure_manager.model_utils as mu
+import model_utils as mu
 
 class StructureManager():
     """Main Class wrapping Bio.PDB structure object
@@ -520,7 +520,7 @@ class StructureManager():
                 pdbio.save(output_pdb_path)
 
             except OSError:
-                sys.stderr.write ("#ERROR: unable to save PDB data on " + output_path)
+                sys.stderr.write ("#ERROR: unable to save PDB data on " + output_pdb_path)
         else:
             sys.stderr.write ("Error: output_pdb_path not provided \n")
             sys.exit(1)
