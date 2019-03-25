@@ -22,9 +22,9 @@ setuptools.setup(
     },
     packages=setuptools.find_packages(exclude=['docs', 'test']),
     install_requires=['biopython==1.73'],
-    python_requires='==3.6',
+    python_requires='==3.6.*',
     classifiers=(
-        "Development Status :: 3.6 - Alpha",
+        "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: MacOS :: MacOS X",
