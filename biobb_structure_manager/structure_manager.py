@@ -12,7 +12,7 @@ from Bio.PDB.Atom import Atom
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from mmb_server import MMBPDBList
 
-import model_utils as mu
+import biobb_structure_manager.model_utils as mu
 
 class StructureManager():
     """Main Class wrapping Bio.PDB structure object
