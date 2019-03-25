@@ -10,7 +10,7 @@ from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.Atom import Atom
 from Bio.PDB.parse_pdb_header import parse_pdb_header
-from mmb_server import MMBPDBList
+from biobb_structure_manager.mmb_server import MMBPDBList
 
 import biobb_structure_manager.model_utils as mu
 

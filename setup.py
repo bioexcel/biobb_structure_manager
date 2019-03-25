@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobb_structure_manager",
-    version="0.0.4",
+    version="0.0.5",
     author="Biobb developers",
     author_email="josep.gelpi@bsc.es",
     description="BioBB_structure_manager is la library to efficiently load and process biomolecular 3D structures.",
