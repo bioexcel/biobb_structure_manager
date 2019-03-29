@@ -137,35 +137,24 @@ class StructureManager():
         if "pdb:"in input_pdb_path:
             # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             pdbl = MMBPDBList(pdb=cache_dir, server=pdb_server)
-            try:
-                if '.' in input_pdb_path:
-                    [pdbid, biounit] = input_pdb_path.split('.')
-                    input_pdb_path = pdbid[4:].upper()
-                    if pdb_server != 'mmb':
-                        print(
-                            "Error: Biounits supported only on mmb server",
-                            file=sys.stderr
-                        )
-                        sys.exit(1)
-                    real_pdb_path = pdbl.retrieve_pdb_file(
-                        input_pdb_path, file_format='pdb', biounit=biounit
-                    )
-                    self.biounit = biounit
-                else:
-                    input_pdb_path = input_pdb_path[4:].upper()
-                    real_pdb_path = pdbl.retrieve_pdb_file(
-                        input_pdb_path, file_format=self.file_format
-                    )
-                    if file_format == 'pdb':
-                        # change file name to id.pdb
-                        os.rename(real_pdb_path, input_pdb_path+".pdb")
-                        real_pdb_path = input_pdb_path + ".pdb"
-            except IOError:
-                print(
-                    'ERROR: fetching structure at {}'.format(input_pdb_path),
-                    file=sys.stderr
+            if '.' in input_pdb_path:
+                [pdbid, biounit] = input_pdb_path.split('.')
+                input_pdb_path = pdbid[4:].upper()
+                if pdb_server != 'mmb':
+                    raise exc.WrongServerError
+                real_pdb_path = pdbl.retrieve_pdb_file(
+                    input_pdb_path, file_format='pdb', biounit=biounit
                 )
-                sys.exit(2)
+                self.biounit = biounit
+            else:
+                input_pdb_path = input_pdb_path[4:].upper()
+                real_pdb_path = pdbl.retrieve_pdb_file(
+                    input_pdb_path, file_format=self.file_format
+                )
+                if file_format == 'pdb':
+                    # change file name to id.pdb
+                    os.rename(real_pdb_path, input_pdb_path + ".pdb")
+                    real_pdb_path = input_pdb_path + ".pdb"
         else:
             real_pdb_path = input_pdb_path
 
@@ -176,25 +165,18 @@ class StructureManager():
             parser = MMCIFParser()
             self.input_format = 'cif'
         else:
-            print('ERROR: unknown filetype', file=sys.stderr)
-            sys.exit(2)
-        try:
-            warnings.simplefilter('ignore', BiopythonWarning)
-            self.st = parser.get_structure('st', real_pdb_path)
-            if self.input_format == 'pdb':
-                self.headers = parse_pdb_header(real_pdb_path)
-            else:
-                self.headers = MMCIF2Dict(real_pdb_path)
-
-        except OSError:
-            print("#ERROR: parsing PDB", file=sys.stderr)
-            sys.exit(2)
+            raise UnknownFileTypeError(input_pdb_path)
+        warnings.simplefilter('ignore', BiopythonWarning)
+        self.st = parser.get_structure('st', real_pdb_path)
+        if self.input_format == 'pdb':
+            self.headers = parse_pdb_header(real_pdb_path)
+        else:
+            self.headers = MMCIF2Dict(real_pdb_path)
 
     def _update_internals(self):
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
         #Atom renumbering for mmCIF, PDB uses atom number in file
-        self.atom_renumbering()
         self.atom_renumbering()
         self.set_chain_ids()
         self.calc_stats()
@@ -628,17 +610,12 @@ class StructureManager():
         Errors:
             OSError: Error saving the file
         """
-        if output_pdb_path:
-            pdbio = PDBIO()
-            pdbio.set_structure(self.st)
-            try:
-                pdbio.save(output_pdb_path)
-
-            except OSError:
-                sys.stderr.write("#ERROR: unable to save PDB data on " + output_pdb_path)
-        else:
-            sys.stderr.write("Error: output_pdb_path not provided \n")
-            sys.exit(1)
+        if not output_pdb_path:
+            raise OutputPathNotProvidedError
+            return
+        pdbio = PDBIO()
+        pdbio.set_structure(self.st)
+        pdbio.save(output_pdb_path)
 
 # Methods to modify structure
     def select_model(self, keep_model):
@@ -703,8 +680,7 @@ class StructureManager():
         ch_ok = select_chains.split(',')
         for chn in ch_ok:
             if not chn in self.chain_ids:
-                sys.stderr.write('Error: requested chain {} not present'.format(chn))
-                select_chains = ''
+                print('Error: requested chain {} not present'.format(chn))
         for mod in self.st:
             for chn in self.chain_ids:
                 if chn not in ch_ok:
@@ -903,3 +879,20 @@ class StructureManager():
         self.atom_renumbering()
         self.modified = True
         return mutated_res
+#===============================================================================
+
+class Error(Exception):
+    """ Base class """
+    pass
+
+class WrongServerError(Error):
+    def __init__(self):
+        self.message = 'ERROR: Biounits supported only on MMB server'
+        
+class UnknownFileTypeError(Error):
+    def __init__(self, type):
+        self.message = 'ERROR: unknown filetype ({})'.format(type)
+
+class OutputPathNotProvidedError(Error):
+    def __init__(self):
+        self.message = 'ERROR: output PDB path not provided'
