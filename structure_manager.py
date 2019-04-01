@@ -614,7 +614,6 @@ class StructureManager():
         """
         if not output_pdb_path:
             raise OutputPathNotProvidedError
-            return
         pdbio = PDBIO()
         pdbio.set_structure(self.st)
         pdbio.save(output_pdb_path)
@@ -682,7 +681,7 @@ class StructureManager():
         ch_ok = select_chains.split(',')
         for chn in ch_ok:
             if not chn in self.chain_ids:
-                print('Error: requested chain {} not present'.format(chn))
+                print('Warning: skipping unknown chain', chn)
         for mod in self.st:
             for chn in self.chain_ids:
                 if chn not in ch_ok:
@@ -758,7 +757,7 @@ class StructureManager():
         self.atom_renumbering()
         self.modified = True
 
-    def fix_backbone_atoms(self, r_at):
+    def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
@@ -766,25 +765,20 @@ class StructureManager():
         [res, at_list] = r_at
         print(mu.residue_id(res))
         if not 'C' in res:
-            print("  Warning: not enough backbone to reconstruct missing atoms")
-            return False
+            raise NotEnoughAtomsError
         if len(at_list) == 2 or at_list == ['O']:
             if 'CA' not in res or 'N' not in res or 'C' not in res:
-                print("  Warning: not enough backbone to reconstruct O atom")
-                return 1
+                raise NotEnoughAtomsError
             print("  Adding new atom O")
             mu.add_new_atom_to_residue(res, 'O', mu.build_coords_O(res))
         if 'OXT' in at_list:
             if 'CA' not in res or 'C' not in res or 'O' not in res:
-                print(
-                    "Warning: not enough backbone atoms to build OXT atom",
-                )
-                return False
+                raise NotEnoughAtomsError
             print("  Adding new atom OXT")
             mu.add_new_atom_to_residue(
                 res,
                 'OXT',
-                mu.build_coords_SP2(1.229, res['C'], res['CA'], res['O'])
+                mu.build_coords_SP2(mu.OINTERNALS[0], res['C'], res['CA'], res['O'])
             )
 
         self.atom_renumbering()
@@ -815,10 +809,7 @@ class StructureManager():
                 continue
         # Skip residues without addH rules
             if res.get_resname() not in addH_rules:
-                print(
-                    "Warning: Add side chain hydrogens not implemented for residue ",
-                    res.get_resname()
-                )
+                print(NotAValidResidueError(res.get_resname()).message)
                 done_side.add(res)
                 continue
             rcode = res.get_resname()
@@ -845,10 +836,7 @@ class StructureManager():
 
             if res not in done_side and rcode != 'GLY':
                 if rcode not in addH_rules:
-                    print(
-                        "Warning: Add side chain hydrogens not implemented for residue ",
-                        rcode
-                    )
+                    print(NotAValidResidueError(rcode).message)
                     continue
 
                 error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, addH_rules[rcode])
@@ -885,10 +873,26 @@ class StructureManager():
         self.modified = True
         return mutated_res
 
+    def invert_amide_atoms(self, res):
+        """ Fix sidechains with incorrect amide assignments"""
+        amide_res = self.data_library.get_amide_data()[0]
+        res_type = res.get_resname()
+        if res_type not in amide_res:
+            raise NotAValidResidueError(res_type)           
+        mu.swap_atoms(
+            res[amide_res[res_type][0]], 
+            res[amide_res[res_type][1]]
+        )
+        
     def fix_chiral_chains(self, res):
         """ Fix sidechains with chiral errors"""
-        mu.invert_side_atoms(res, self.data_library.get_chiral_data())
-        if res.get_resname() == 'ILE':
+        chiral_res = self.data_library.get_chiral_data()
+        res_type = res.get_resname()
+        mu.swap_atoms(
+            res[chiral_res[res_type][0]],
+            res[chiral_res[res_type][1]]
+        )
+        if res_type == 'ILE':
             mu.delete_atom(res, 'CD1')
             mu.build_atom(res, 'CD1', self.res_library, 'ILE')
 
@@ -909,3 +913,11 @@ class UnknownFileTypeError(Error):
 class OutputPathNotProvidedError(Error):
     def __init__(self):
         self.message = 'ERROR: output PDB path not provided'
+
+class NotAValidResidueError(Error):
+    def __init__(self, res):
+        self.message = 'Warning: {} is not a valid residue in this context'.format(res)
+        
+class NotEnoughAtomsError(Error):
+    def __init__(self):
+        self.message = 'Warning: not enough backbone to build missing atoms'

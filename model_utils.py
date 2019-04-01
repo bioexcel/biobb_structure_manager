@@ -40,6 +40,7 @@ CBINTERNALS = [1.5, 115.5, -123.]
 OINTERNALS = [1.229, 120.500, 0.000]
 SP3ANGLE = 109.470
 SP3DIHS = [60.0, 180.0, 300.0]
+HDIS = 1.08
 
 
 # TODO: consider replace by Bio.PDB equivalent
@@ -445,27 +446,16 @@ def swap_atoms(at1, at2):
     at2.name = at1_name
     at2.fullname = at1_fullname
 
-def invert_side_atoms(res, res_data):
-    """
-     Swaps atoms according to res_data. Useful for fixing amides and chirality issues
-    """
-    #TODO check merging with swat_atom_names
-    #TODO reconstruct CD1 atom in Ile
-    res_type = res.get_resname()
-    if not res_type in res_data:
-        sys.stderr.write('Error: {} is not a valid residue'.format(res_type))
-    swap_atoms(res[res_data[res_type][0]], res[res_data[res_type][1]])
-
-def invert_chirality(res, at1, at2, at3, at4):
-    """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
-    """
-    #TODO
-
-def invert_chiral_ca(res):
-    """
-     Inverts CA Chirality.
-    """
-    #TODO
+#def invert_chirality(res, at1, at2, at3, at4):
+#    """Inverts chirality of at2 by rotating at4, and the associated end chain atoms
+    #"""
+#    #TODO
+#
+#def invert_chiral_ca(res):
+#    """
+#    Inverts CA Chirality.
+    #"""
+#    #TODO
 
 # Atom management ==============================================================
 def rename_atom(res, old_at, new_at):
@@ -486,9 +476,9 @@ def add_hydrogens_backbone(res, res_1):
     # only proteins
 
     if not protein_residue_check(res.get_resname()):
-        return "Warning: Add backbone hydrogens not implemented for residue "
+        return "Warning: Residue not valid in this context "
 
-    error_msg = "Warning: not enough atoms to build backbone H atoms on "
+    error_msg = "Warning: not enough atoms to build backbone hydrogen atoms on"
 
     if 'N' not in res or 'CA' not in res:
         return error_msg
@@ -502,13 +492,13 @@ def add_hydrogens_backbone(res, res_1):
             add_new_atom_to_residue(
                 res,
                 'H',
-                build_coords_SP2(1.08, res['N'], res['CA'], res['CD'])
+                build_coords_SP2(HDIS, res['N'], res['CA'], res['CD'])
             )
         else:
             if 'C' not in res:
                 return error_msg
 
-            crs = build_coords_3xSP3(1.010, res['N'], res['CA'], res['C'])
+            crs = build_coords_3xSP3(HDIS, res['N'], res['CA'], res['C'])
             add_new_atom_to_residue(res, 'H1', crs[0])
             add_new_atom_to_residue(res, 'H2', crs[1])
             add_new_atom_to_residue(res, 'H3', crs[2])
@@ -520,14 +510,14 @@ def add_hydrogens_backbone(res, res_1):
         add_new_atom_to_residue(
             res,
             'H',
-            build_coords_SP2(1.08, res['N'], res['CA'], res_1['C'])
+            build_coords_SP2(HDIS, res['N'], res['CA'], res_1['C'])
         )
 
     if res.get_resname() == 'GLY':
         if 'C' not in res:
             return error_msg
 
-        crs = build_coords_2xSP3(1.010, res['CA'], res['N'], res['C'])
+        crs = build_coords_2xSP3(HDIS, res['CA'], res['N'], res['C'])
         add_new_atom_to_residue(res, 'HA2', crs[0])
         add_new_atom_to_residue(res, 'HA3', crs[1])
 
@@ -538,7 +528,7 @@ def add_hydrogens_backbone(res, res_1):
         add_new_atom_to_residue(
             res,
             'HA',
-            build_coords_1xSP3(1.08, res['CA'], res['N'], res['C'], res['CB'])
+            build_coords_1xSP3(HDIS, res['CA'], res['N'], res['C'], res['CB'])
         )
 
     return False
@@ -548,7 +538,7 @@ def add_hydrogens_backbone(res, res_1):
 def add_hydrogens_side(res, res_library, opt, rules):
     """ Add hydrogens to side chains"""
     if 'N' not in res or 'CA' not in res or 'C' not in res:
-        return "Warning: not enough atoms to build side chain H atoms on "
+        return "Warning: not enough atoms to build side chain hydrogen atoms on"
 
     for key_rule in rules.keys():
         rule = rules[key_rule]
