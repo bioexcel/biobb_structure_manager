@@ -720,7 +720,7 @@ class StructureManager():
         res.disordered = 0
         self.modified = True
 
-    def remove_residue(self, res):
+    def remove_residue(self, res, update_int=True):
         """
         Removes residue **r** from the structure. Triggers **modified** flag
         and atom and residue renumbering
@@ -728,7 +728,8 @@ class StructureManager():
         mu.remove_residue(res)
 
         # Update internal data
-        self._update_internals()
+        if update_int:
+            self._update_internals()
 
         self.modified = True
 
