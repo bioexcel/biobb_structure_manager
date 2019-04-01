@@ -880,6 +880,13 @@ class StructureManager():
         self.atom_renumbering()
         self.modified = True
         return mutated_res
+    
+    def fix_chiral_chains(self, res):
+        mu.invert_side_atoms(res, self.data_library.get_chiral_data())
+        if res.get_resname() == 'ILE':
+            mu.delete_atom(res, 'CD1')
+            mu.build_atom(res, 'CD1', self.res_library, 'ILE')
+    
 #===============================================================================
 
 class Error(Exception):
