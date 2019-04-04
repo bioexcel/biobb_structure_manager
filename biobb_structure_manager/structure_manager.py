@@ -8,12 +8,12 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
-from structure_manager.mmb_server import MMBPDBList
-from structure_manager.mutation_manager import MutationManager
-from structure_manager.data_lib_manager import DataLibManager
-from structure_manager.residue_lib_manager import ResidueLib
+from biobb_structure_manager.mmb_server import MMBPDBList
+from biobb_structure_manager.mutation_manager import MutationManager
+from biobb_structure_manager.data_lib_manager import DataLibManager
+from biobb_structure_manager.residue_lib_manager import ResidueLib
 
-import structure_manager.model_utils as mu
+import biobb_structure_manager.model_utils as mu
 
 CISTHRES = 20  #TODO check vaules with pdb checking
 TRANSTHRES = 160

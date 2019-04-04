@@ -5,7 +5,7 @@
 import re
 import sys
 
-import structure_manager.model_utils as mu
+import biobb_structure_manager.model_utils as mu
 
 ADD = 'Add'
 DEL = 'Del'
