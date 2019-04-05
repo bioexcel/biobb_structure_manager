@@ -174,13 +174,13 @@ class StructureManager():
         self.rr_dist = mu.get_all_r2r_distances(
             self.st,
             'all',
-            self.data_library.get_distances('R_R_CUTOFF'),
+            self.data_library.distances['R_R_CUTOFF'],
             join_models=False
         )
         #Precalc backbone . TODO Nucleic Acids
         self.check_backbone_connect(
             ['N', 'C'],
-            self.data_library.get_distances('COVLNK')
+            self.data_library.distances['COVLNK']
         )
 
     def residue_renumbering(self):
@@ -215,7 +215,7 @@ class StructureManager():
         self.hetatm = {}
         for typ  in [mu.UNKNOWN, mu.MODRES, mu.METAL, mu.ORGANIC, mu.COVORGANIC, mu.WAT]:
             self.hetatm[typ] = []
-        for res in self.get_structure().get_residues():
+        for res in self.st.get_residues():
             if not mu.is_hetatm(res):
                 continue
             if mu.is_wat(res):
@@ -265,37 +265,42 @@ class StructureManager():
 
     def get_metal_atoms(self):
         """ Makes a list of possible metal atoms"""
-        return mu.get_metal_atoms(self.st, self.data_library.get_metal_atoms())
+        return mu.get_metal_atoms(self.st, self.data_library.atom_data['metal_atoms'])
 
     def get_SS_bonds(self):
         """ Returns possible SS Bonds by distance"""
         return mu.get_all_at2at_distances(
             self.st,
             'SG',
-            self.data_library.get_distances('SS_DIST'),
+            self.data_library.distances['SS_DIST'],
             not self.has_superimp_models()
         )
-
-    def get_amide_list(self):
-        """ Return list of amide residues """
-        amide_res = self.data_library.get_amide_data()[0]
-
-        amide_list = set()
-
-        for res in self.st.get_residues():
-            if res.get_resname() in amide_res:
-                amide_list.add(res)
-
-        return amide_list
-
-    def get_chiral_list(self):
-        """ Returns a list of chiral side chains"""
+    
+    def check_chiral_sides(self):
+        """ Returns a list of wrong chiral side chains"""
         chiral_res = self.data_library.get_chiral_data()
         chiral_list = []
         for res in self.st.get_residues():
             if res.get_resname() in chiral_res:
                 chiral_list.append(res)
-        return chiral_list
+
+        if not chiral_list:
+            return {}
+
+        chiral_res_to_fix = []
+        chiral_rnums = []
+
+        for res in chiral_list:
+            if not mu.check_chiral_residue(res, chiral_res):
+                chiral_res_to_fix.append(res)
+                chiral_rnums.append(mu.residue_num(res))
+
+        return {
+            'chiral_list' : chiral_list,
+            'chiral_res_to_fix': chiral_res_to_fix, 
+            'chiral_rnums' : chiral_rnums
+        }
+
 
     def get_chiral_bck_list(self):
         """ Returns a list of residues with chiral CAs"""
@@ -306,17 +311,31 @@ class StructureManager():
                 prot_chains += 1
                 for res in chn.get_residues():
                     if res.get_resname() != 'GLY' and not mu.is_hetatm(res):
-                        chiral_bck_list.append(res)
+                        chiral_bck_list.append(res)                        
         if not prot_chains:
             print("No protein chains detected, skipping")
-        return chiral_bck_list
+
+        if chiral_bck_list:
+            chiral_bck_res_to_fix = []
+            chiral_bck_rnums = []
+            for res in chiral_bck_list:
+                if not mu.check_chiral_ca(res):
+                    chiral_bck_res_to_fix.append(res)
+                    chiral_bck_rnums.append(mu.residue_num(res))
+
+        return {
+            'chiral_bck_list': chiral_bck_list,
+            'chiral_bck_res_to_fix' : chiral_bck_res_to_fix,
+            'chiral_bck_rnums' : chiral_bck_rnums
+        }
+            
 
     def check_r_list_clashes(self, residue_list, contact_types):
         """ Checks clashes originated by a list of residues"""
         return mu.check_r_list_clashes(
             residue_list,
             self.rr_dist,
-            self.data_library.get_distances('CLASH_DIST'),
+            self.data_library.distances['CLASH_DIST'],
             self.data_library.get_atom_lists(contact_types),
             not self.has_superimp_models()
         )
@@ -326,7 +345,7 @@ class StructureManager():
         return mu.check_rr_clashes(
             res1,
             res2,
-            self.data_library.get_distances('CLASH_DIST'),
+            self.data_library.distances['CLASH_DIST'],
             self.data_library.get_atom_lists(contact_types)
         )
 
@@ -447,7 +466,7 @@ class StructureManager():
         """
         if not self.backbone_links:
             self.backbone_links = mu.get_backbone_links(
-                self.get_structure(), backbone_atoms, covlnk
+                self.st, backbone_atoms, covlnk
             )
         self.next_residue = {}
         self.prev_residue = {}
@@ -481,6 +500,49 @@ class StructureManager():
                 elif abs(dih) < TRANSTHRES:
                     lowtrans_backbone_list.append([res1, res2, dih])
         return (cis_backbone_list, lowtrans_backbone_list)
+
+    def check_amide_contacts(self):
+        """ Check close contacts involving amide atoms """
+        [amide_res, amide_atoms] = self.data_library.get_amide_data()
+
+        amide_list = set()
+
+        for res in self.st.get_residues():
+            if res.get_resname() in amide_res:
+                amide_list.add(res)
+        
+        if not amide_list:
+            return {}
+
+        c_list = self.check_r_list_clashes(
+            amide_list,
+            AMIDE_CONTACT_TYPES
+        )
+        amide_res_to_fix = []
+        amide_rnums = []
+        amide_cont_list = []
+        for cls in c_list:
+            for rkey in c_list[cls]:
+                [at1, at2] = c_list[cls][rkey][0:2]
+                res1 = at1.get_parent()
+                res2 = at2.get_parent()
+                add_pair = False
+                if at1.id in amide_atoms and res1 in amide_list:
+                    amide_res_to_fix.append(res1)
+                    amide_rnums.append(mu.residue_num(res1))
+                    add_pair = True
+                if at2.id in amide_atoms and res2 in amide_list:
+                    amide_res_to_fix.append(res2)
+                    amide_rnums.append(mu.residue_num(res2))
+                    add_pair = True
+                if add_pair:
+                    amide_cont_list.append(c_list[cls][rkey])
+        return {
+            'amide_list':  amide_list,
+            'amide_res_to_fix': amide_res_to_fix,
+            'amide_cont_list': amide_cont_list,
+            'amide_rnums': amide_rnums
+        }
 
     def get_stats(self):
         """
@@ -592,16 +654,6 @@ class StructureManager():
             for res in self.hetatm[mu.ORGANIC]:
                 print(mu.residue_id(res))
 
-
-    def get_structure(self):
-        """
-        Method pointing to the enclosed Bio.PDB.Structure object
-
-        Returns:
-            a Bio.PDB.Structure object
-        """
-        return self.st
-
     def save_structure(self, output_pdb_path):
         """
         Saves structure on disk in PDB format
@@ -617,6 +669,17 @@ class StructureManager():
         pdbio = PDBIO()
         pdbio.set_structure(self.st)
         pdbio.save(output_pdb_path)
+
+    def get_all_r2r_distances(self, atom_group, join_models):
+        return mu.get_all_r2r_distances(
+                self.st,
+                atom_group,
+                self.data_library.distances['R_R_CUTOFF'],
+                join_models=join_models
+        )
+
+    def get_altloc_residues(self):
+        return mu.get_altloc_residues(self.st)
 
 # Methods to modify structure
     def select_model(self, keep_model):

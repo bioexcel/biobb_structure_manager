@@ -34,17 +34,13 @@ class DataLibManager():
 
     def get_all_atom_lists(self):
         """ Obtains lists of atoms per protein residue. """
-        ats_lists = {}
-        for code in self.residue_codes['protein']:
-            ats_lists[code] = {
+        atom_lists = {}
+        for rcode in self.residue_codes['protein']:
+            atom_lists[rcode] = {
                 'backbone': self.residue_data['*']['bck_atoms'],
-                'side': self.residue_data[code]['side_atoms']
+                'side': self.residue_data[rcode]['side_atoms']
             }
-        return ats_lists
-
-    def get_metal_atoms(self):
-        """ Gets metal atom names. """
-        return self.atom_data['metal_atoms']
+        return atom_lists
 
     def get_atom_feature_list(self, feature):
         """ Gets a residue list with a specific section of data . """
@@ -56,21 +52,25 @@ class DataLibManager():
             f_list['*'] = []
         return f_list
 
+    def get_chiral_data(self):
+        """ Gets data related to chiral residues. """
+        return self.get_atom_feature_list('chiral_atoms')
+
+    def get_hydrogen_atoms(self):
+        """ Gets list of hydrogen atoms per residue. """
+        return self.get_atom_feature_list('hydrogen_atoms')
+
+    def get_add_h_rules(self):
+        """ Gets rules for adding Hydrogen atoms to residues. """
+        return self.get_atom_feature_list('addH_rules')
+
     def get_atom_lists(self, contact_types):
         """ Gets a list of atoms organized per contact types. """
         atom_lists = {}
-        for cls in contact_types:
-            if cls != 'severe':
-                atom_lists[cls] = self.get_atom_feature_list(cls + '_atoms')
+        for cls_type in contact_types:
+            if cls_type != 'severe':
+                atom_lists[cls_type] = self.get_atom_feature_list(cls_type + '_atoms')
         return atom_lists
-
-    def get_mutation_rules(self, aa_in, aa_out, rule_group):
-        """ Gets mutation rules for a specific mutation, and rule type """
-        return self.residue_data[aa_in]['mutation_rules'][aa_out][rule_group]
-
-    def get_distances(self, distid):
-        """ Get distance constant. """
-        return self.distances[distid]
 
     def get_amide_data(self):
         """ Gets data related to amide residues """
@@ -81,15 +81,7 @@ class DataLibManager():
                 alist += self.residue_data[rcode]['amide_atoms']
                 rlist[rcode] = self.residue_data[rcode]['amide_atoms']
         return [rlist, alist]
-
-    def get_chiral_data(self):
-        """ Gets data related to chiral residues. """
-        rlist = {}
-        for rcode in self.residue_data:
-            if 'chiral_atoms' in self.residue_data[rcode]:
-                rlist[rcode] = self.residue_data[rcode]['chiral_atoms']
-        return rlist
-
+    
     def get_mutation_map(self):
         """ Gets the complete map of mutation rules per residue."""
         mut_rules = {}
@@ -99,22 +91,3 @@ class DataLibManager():
                 mut_rules[rcode]['side_atoms'] = self.residue_data[rcode]['side_atoms']
         return mut_rules
 
-    def get_hydrogen_atoms(self):
-        """ Gets list of hydrogen atoms per residue. """
-        h_atom_list = {}
-        for rcode in self.residue_data:
-            if 'hydrogen_atoms' in self.residue_data[rcode]:
-                h_atom_list[rcode] = self.residue_data[rcode]['hydrogen_atoms']
-        return h_atom_list
-
-    def get_ion_data(self):
-        """ Gets residues data related to ionization states. """
-        return self.std_ion
-
-    def get_add_h_rules(self):
-        """ Gets rules for adding Hydrogen atoms to residues. """
-        rules_list = {}
-        for rcode in self.residue_data:
-            if 'addH_rules' in self.residue_data[rcode]:
-                rules_list[rcode] = self.residue_data[rcode]['addH_rules']
-        return rules_list
