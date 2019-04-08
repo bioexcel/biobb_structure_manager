@@ -718,10 +718,6 @@ class StructureManager():
         """
         return self.models_type and self.models_type['type'] == mu.ENSM
 
-    def is_biounit(self):
-        """Shortcut to check whether the structure has been loaded from a biounit
-        """
-
     def set_chain_ids(self):
         """
         Identifies and sets the chain ids, guessing its nature (protein, dna, rna, ...)
