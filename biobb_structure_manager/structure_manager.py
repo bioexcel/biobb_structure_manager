@@ -79,7 +79,6 @@ class StructureManager():
         """
 
         self.chain_ids = {}
-        self.sorted_chain_ids = []
 
         self.backbone_links = []
         self.modified_residue_list = []
@@ -92,6 +91,8 @@ class StructureManager():
         self.res_insc = 0
         self.res_ligands = 0
         self.ca_only = False
+
+        self.ss_bonds = []
 
         self.meta = {}
 
@@ -107,7 +108,9 @@ class StructureManager():
         self.data_library = DataLibManager(data_library_path)
         self.res_library = ResidueLib(res_library_path)
 
-        self.input_format = self._load_structure_file(input_pdb_path, cache_dir, pdb_server, file_format)
+        self.input_format = self._load_structure_file(
+            input_pdb_path, cache_dir, pdb_server, file_format
+        )
 
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
@@ -158,7 +161,7 @@ class StructureManager():
             self.headers = parse_pdb_header(real_pdb_path)
         else:
             self.headers = MMCIF2Dict(real_pdb_path)
-            
+
         return input_format
 
     def update_internals(self):
@@ -268,14 +271,15 @@ class StructureManager():
         return mu.get_metal_atoms(self.st, self.data_library.atom_data['metal_atoms'])
 
     def get_SS_bonds(self):
-        """ Returns possible SS Bonds by distance"""
-        return mu.get_all_at2at_distances(
+        """ Stores and returns possible SS Bonds by distance"""
+        self.ss_bonds = mu.get_all_at2at_distances(
             self.st,
             'SG',
             self.data_library.distances['SS_DIST'],
             not self.has_superimp_models()
         )
-    
+        return self.ss_bonds
+
     def check_chiral_sides(self):
         """ Returns a list of wrong chiral side chains"""
         chiral_res = self.data_library.get_chiral_data()
@@ -288,17 +292,14 @@ class StructureManager():
             return {}
 
         chiral_res_to_fix = []
-        chiral_rnums = []
 
         for res in chiral_list:
             if not mu.check_chiral_residue(res, chiral_res):
                 chiral_res_to_fix.append(res)
-                chiral_rnums.append(mu.residue_num(res))
 
         return {
-            'chiral_list' : chiral_list,
-            'chiral_res_to_fix': chiral_res_to_fix, 
-            'chiral_rnums' : chiral_rnums
+            'list' : chiral_list,
+            'res_to_fix': chiral_res_to_fix,
         }
 
 
@@ -311,8 +312,8 @@ class StructureManager():
                 prot_chains += 1
                 for res in chn.get_residues():
                     if res.get_resname() != 'GLY' and not mu.is_hetatm(res):
-                        chiral_bck_list.append(res)                        
-        
+                        chiral_bck_list.append(res)
+
         if not prot_chains:
             print("No protein chains detected, skipping")
             return {}
@@ -320,20 +321,17 @@ class StructureManager():
         if not chiral_bck_list:
             print("No residues with chiral CA found, skipping")
             return {'chiral_bck_list': []}
-        
+
         chiral_bck_res_to_fix = []
-        chiral_bck_rnums = []
         for res in chiral_bck_list:
             if not mu.check_chiral_ca(res):
                 chiral_bck_res_to_fix.append(res)
-                chiral_bck_rnums.append(mu.residue_num(res))
 
         return {
-            'chiral_bck_list': chiral_bck_list,
-            'chiral_bck_res_to_fix' : chiral_bck_res_to_fix,
-            'chiral_bck_rnums' : chiral_bck_rnums
+            'list': chiral_bck_list,
+            'res_to_fix' : chiral_bck_res_to_fix,
         }
-            
+
 
     def check_r_list_clashes(self, residue_list, contact_types):
         """ Checks clashes originated by a list of residues"""
@@ -515,7 +513,7 @@ class StructureManager():
         for res in self.st.get_residues():
             if res.get_resname() in amide_res:
                 amide_list.add(res)
-        
+
         if not amide_list:
             return {}
 
@@ -524,7 +522,6 @@ class StructureManager():
             AMIDE_CONTACT_TYPES
         )
         amide_res_to_fix = []
-        amide_rnums = []
         amide_cont_list = []
         for cls in c_list:
             for rkey in c_list[cls]:
@@ -534,19 +531,16 @@ class StructureManager():
                 add_pair = False
                 if at1.id in amide_atoms and res1 in amide_list:
                     amide_res_to_fix.append(res1)
-                    amide_rnums.append(mu.residue_num(res1))
                     add_pair = True
                 if at2.id in amide_atoms and res2 in amide_list:
                     amide_res_to_fix.append(res2)
-                    amide_rnums.append(mu.residue_num(res2))
                     add_pair = True
                 if add_pair:
                     amide_cont_list.append(c_list[cls][rkey])
         return {
-            'amide_list':  amide_list,
-            'amide_res_to_fix': amide_res_to_fix,
-            'amide_cont_list': amide_cont_list,
-            'amide_rnums': amide_rnums
+            'list':  amide_list,
+            'res_to_fix': amide_res_to_fix,
+            'cont_list': amide_cont_list,
         }
 
     def get_stats(self):
@@ -620,8 +614,8 @@ class StructureManager():
             )
         else:
             print('{} Num. models: {}'.format(prefix, self.nmodels))
-    
-    def print_chain_stats(self, prefix=''):        
+
+    def print_chain_stats(self, prefix=''):
         chids = []
         for ch_id in sorted(self.chain_ids):
             if isinstance(self.chain_ids[ch_id], list):
@@ -633,7 +627,7 @@ class StructureManager():
                     )
                 )
         print('{} Num. chains: {} ({})'.format(prefix, len(self.chain_ids), ', '.join(chids)))
-        
+
 
     def print_stats(self, prefix=''):
         """
@@ -691,13 +685,13 @@ class StructureManager():
                 join_models: consider all models as separated molecules
             Output:
                 List of tupes (r1,r2,dist)
-                
+
         """
         return mu.get_all_r2r_distances(
-                self.st,
-                res_group,
-                self.data_library.distances['R_R_CUTOFF'],
-                join_models=join_models
+            self.st,
+            res_group,
+            self.data_library.distances['R_R_CUTOFF'],
+            join_models=join_models
         )
 
     def get_altloc_residues(self):
@@ -749,7 +743,6 @@ class StructureManager():
             if not self.biounit and chn.get_parent().id > 0:
                 continue
             self.chain_ids[chn.id] = mu.guess_chain_type(chn)
-        self.sorted_chain_ids = sorted (self.chain_ids)
 
     def select_chains(self, select_chains):
         """
@@ -874,7 +867,7 @@ class StructureManager():
            **r_at_list**: tuple as [Bio.PDB.Residue, Tauromeric Option]
            **hydrogens_list**: Hydrogen atom names per residue type
         """
-        addH_rules = self.data_library.get_add_h_rules()
+        add_h_rules = self.data_library.get_add_h_rules()
 
         done_side = set()
 
@@ -889,12 +882,12 @@ class StructureManager():
             if mu.is_hetatm(res):
                 continue
         # Skip residues without addH rules
-            if res.get_resname() not in addH_rules:
+            if res.get_resname() not in add_h_rules:
                 print(NotAValidResidueError(res.get_resname()).message)
                 done_side.add(res)
                 continue
             rcode = res.get_resname()
-            error_msg = mu.add_hydrogens_side(res, self.res_library, opt, addH_rules[rcode][opt])
+            error_msg = mu.add_hydrogens_side(res, self.res_library, opt, add_h_rules[rcode][opt])
             if error_msg:
                 print(error_msg, mu.residue_id(res))
             res.resname = opt
@@ -916,11 +909,11 @@ class StructureManager():
                 print(error_msg, mu.residue_id(res))
 
             if res not in done_side and rcode != 'GLY':
-                if rcode not in addH_rules:
+                if rcode not in add_h_rules:
                     print(NotAValidResidueError(rcode).message)
                     continue
 
-                error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, addH_rules[rcode])
+                error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, add_h_rules[rcode])
                 if error_msg:
                     print(error_msg, mu.residue_id(res))
 
@@ -959,12 +952,12 @@ class StructureManager():
         amide_res = self.data_library.get_amide_data()[0]
         res_type = res.get_resname()
         if res_type not in amide_res:
-            raise NotAValidResidueError(res_type)           
+            raise NotAValidResidueError(res_type)
         mu.swap_atoms(
-            res[amide_res[res_type][0]], 
+            res[amide_res[res_type][0]],
             res[amide_res[res_type][1]]
         )
-        
+
     def fix_chiral_chains(self, res):
         """ Fix sidechains with chiral errors"""
         chiral_res = self.data_library.get_chiral_data()
@@ -998,7 +991,7 @@ class OutputPathNotProvidedError(Error):
 class NotAValidResidueError(Error):
     def __init__(self, res):
         self.message = 'Warning: {} is not a valid residue in this context'.format(res)
-        
+
 class NotEnoughAtomsError(Error):
     def __init__(self):
         self.message = 'Warning: not enough backbone to build missing atoms'

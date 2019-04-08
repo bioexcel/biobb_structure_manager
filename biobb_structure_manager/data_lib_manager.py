@@ -81,7 +81,7 @@ class DataLibManager():
                 alist += self.residue_data[rcode]['amide_atoms']
                 rlist[rcode] = self.residue_data[rcode]['amide_atoms']
         return [rlist, alist]
-    
+
     def get_mutation_map(self):
         """ Gets the complete map of mutation rules per residue."""
         mut_rules = {}

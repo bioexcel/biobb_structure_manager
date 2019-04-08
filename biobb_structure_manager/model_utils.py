@@ -404,6 +404,14 @@ def get_backbone_links(struc, backbone_atoms, covlnk, join_models=True):
 
     return cov_links
 
+def prep_rnums_list(res_list):
+    rnums_list = []
+    for res in res_list:
+        rnums_list.append(residue_num(res))
+    return rnums_list
+
+
+
 # Residue manipulation =======================================================
 def remove_H_from_r(res, verbose=False):
     """
