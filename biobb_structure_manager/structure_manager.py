@@ -312,16 +312,21 @@ class StructureManager():
                 for res in chn.get_residues():
                     if res.get_resname() != 'GLY' and not mu.is_hetatm(res):
                         chiral_bck_list.append(res)                        
+        
         if not prot_chains:
             print("No protein chains detected, skipping")
+            return {}
 
-        if chiral_bck_list:
-            chiral_bck_res_to_fix = []
-            chiral_bck_rnums = []
-            for res in chiral_bck_list:
-                if not mu.check_chiral_ca(res):
-                    chiral_bck_res_to_fix.append(res)
-                    chiral_bck_rnums.append(mu.residue_num(res))
+        if not chiral_bck_list:
+            print("No residues with chiral CA found, skipping")
+            return {'chiral_bck_list': []}
+        
+        chiral_bck_res_to_fix = []
+        chiral_bck_rnums = []
+        for res in chiral_bck_list:
+            if not mu.check_chiral_ca(res):
+                chiral_bck_res_to_fix.append(res)
+                chiral_bck_rnums.append(mu.residue_num(res))
 
         return {
             'chiral_bck_list': chiral_bck_list,
@@ -678,10 +683,19 @@ class StructureManager():
         pdbio.set_structure(self.st)
         pdbio.save(output_pdb_path)
 
-    def get_all_r2r_distances(self, atom_group, join_models):
+    def get_all_r2r_distances(self, res_group, join_models):
+        """ Determine residue pairs within a given Cutoff distance
+            calculated from the first atom available
+            Args:
+                res_group: list of residues to check | 'all'
+                join_models: consider all models as separated molecules
+            Output:
+                List of tupes (r1,r2,dist)
+                
+        """
         return mu.get_all_r2r_distances(
                 self.st,
-                atom_group,
+                res_group,
                 self.data_library.distances['R_R_CUTOFF'],
                 join_models=join_models
         )
