@@ -603,6 +603,33 @@ class StructureManager():
         if self.biounit:
             self.meta['biounit'] = self.biounit
 
+    def print_model_stats(self, prefix=''):
+        if self.nmodels > 1:
+            print(
+                '{} Num. models: {} (type: {}, {:8.3f} A)'.format(
+                    prefix,
+                    self.nmodels,
+                    mu.MODEL_TYPE_LABELS[self.models_type['type']],
+                    self.models_type['rmsd']
+                )
+            )
+        else:
+            print('{} Num. models: {}'.format(prefix, self.nmodels))
+    
+    def print_chain_stats(self, prefix=''):        
+        chids = []
+        for ch_id in sorted(self.chain_ids):
+            if isinstance(self.chain_ids[ch_id], list):
+                chids.append('{}: Unknown '.format(ch_id))
+            else:
+                chids.append(
+                    '{}: {}'.format(
+                        ch_id, mu.CHAIN_TYPE_LABELS[self.chain_ids[ch_id]]
+                    )
+                )
+        print('{} Num. chains: {} ({})'.format(prefix, len(self.chain_ids), ', '.join(chids)))
+        
+
     def print_stats(self, prefix=''):
         """
         Prints statistics to stdout
@@ -611,28 +638,9 @@ class StructureManager():
             prefix: Text prefix to prepend to printed data
         """
         stats = self.get_stats()
-        if stats['nmodels'] > 1:
-            print(
-                '{} Num. models: {} (type: {}, {:8.3f} A)'.format(
-                    prefix,
-                    stats['nmodels'],
-                    mu.MODEL_TYPE_LABELS[stats['models_type']['type']],
-                    stats['models_type']['rmsd']
-                )
-            )
-        else:
-            print('{} Num. models: {}'.format(prefix, stats['nmodels']))
-        chids = []
-        for ch_id in sorted(stats['chain_ids']):
-            if isinstance(stats['chain_ids'][ch_id], list):
-                chids.append('{}: Unknown '.format(ch_id))
-            else:
-                chids.append(
-                    '{}: {}'.format(
-                        ch_id, mu.CHAIN_TYPE_LABELS[stats['chain_ids'][ch_id]]
-                    )
-                )
-        print('{} Num. chains: {} ({})'.format(prefix, stats['nchains'], ', '.join(chids)))
+        self.print_model_stats(prefix)
+        self.print_chain_stats(prefix)
+
         print('{} Num. residues:  {}'.format(prefix, stats['num_res']))
         print('{} Num. residues with ins. codes:  {}'.format(prefix, stats['res_insc']))
         print('{} Num. HETATM residues:  {}'.format(prefix, stats['res_hetats']))
