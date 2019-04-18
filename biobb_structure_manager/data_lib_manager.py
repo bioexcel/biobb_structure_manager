@@ -34,20 +34,22 @@ class DataLibManager():
 
     def get_all_atom_lists(self):
         """ Obtains lists of atoms per protein residue. """
-        atom_lists = {}
-        for rcode in self.residue_codes['protein']:
-            atom_lists[rcode] = {
+        atom_lists = {
+            rcode: {
                 'backbone': self.residue_data['*']['bck_atoms'],
                 'side': self.residue_data[rcode]['side_atoms']
             }
+            for rcode in self.residue_codes['protein']
+        }
         return atom_lists
 
     def get_atom_feature_list(self, feature):
         """ Gets a residue list with a specific section of data . """
-        f_list = {}
-        for rcode in self.residue_data:
-            if feature in self.residue_data[rcode]:
-                f_list[rcode] = self.residue_data[rcode][feature]
+        f_list = {
+            rcode: self.residue_data[rcode][feature]
+            for rcode in self.residue_data
+            if feature in self.residue_data[rcode]
+        }
         if '*' not in f_list:
             f_list['*'] = []
         return f_list
@@ -66,10 +68,11 @@ class DataLibManager():
 
     def get_atom_lists(self, contact_types):
         """ Gets a list of atoms organized per contact types. """
-        atom_lists = {}
-        for cls_type in contact_types:
-            if cls_type != 'severe':
-                atom_lists[cls_type] = self.get_atom_feature_list(cls_type + '_atoms')
+        atom_lists = {
+            cls_type : self.get_atom_feature_list(cls_type + '_atoms')
+            for cls_type in contact_types
+            if cls_type != 'severe'
+        }
         return atom_lists
 
     def get_amide_data(self):
@@ -80,7 +83,7 @@ class DataLibManager():
             if 'amide_atoms' in self.residue_data[rcode]:
                 alist += self.residue_data[rcode]['amide_atoms']
                 rlist[rcode] = self.residue_data[rcode]['amide_atoms']
-        return [rlist, alist]
+        return rlist, alist
 
     def get_mutation_map(self):
         """ Gets the complete map of mutation rules per residue."""
@@ -90,4 +93,3 @@ class DataLibManager():
                 mut_rules[rcode] = self.residue_data[rcode]['mutation_rules']
                 mut_rules[rcode]['side_atoms'] = self.residue_data[rcode]['side_atoms']
         return mut_rules
-

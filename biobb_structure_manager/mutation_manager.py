@@ -20,10 +20,9 @@ class MutationManager():
             #Load from file
             id_list = id_list.replace('file:', '')
             print('Reading mutation list from file {}'.format(id_list))
-            self.id_list = []
-            for line in open(id_list, 'r'):
-                self.id_list.append(line.replace('\n', '').replace('\r', ''))
-
+            self.id_list = [
+                line.replace('\n', '').replace('\r', '') for line in open(id_list, 'r')
+            ]
         else:
             self.id_list = id_list.replace(' ', '').split(',')
 
@@ -54,7 +53,7 @@ class MutationSet():
 
         self.id = mut_id.upper()
 
-        [self.chain, mut] = mut_id.split(':')
+        self.chain, mut = mut_id.split(':')
 
         mut_comps = re.match('([A-z]*)([0-9]*)([A-z]*)', mut)
 
@@ -126,22 +125,22 @@ class MutationSet():
                     bck_atoms.append(atm.id)
             for at_id in ['N', 'CA', 'C']:
                 if at_id not in bck_atoms:
-                    print(
+                    sys.exit(
                         '#ERROR: Backbone atoms missing for {}, aborting'.format(
                             mu.residue_id(res)
-                        ), file=sys.stderr
+                        )
                     )
-                    sys.exit(1)
-            missing_ats = []
-            for at_id in mut_map[rname]['side_atoms']:
-                if at_id not in side_atoms:
-                    missing_ats.append(at_id)
+            missing_ats = [
+                at_id
+                for at_id in mut_map[rname]['side_atoms']
+                if at_id not in side_atoms
+            ]
             print("Replacing " + mu.residue_id(res) + " into " + self.new_id)
             in_rules = []
             extra_adds = []
             # Renaming ats
             for rule in mut_map[rname][self.new_id][MOV]:
-                [old_at, new_at] = rule.split("-")
+                old_at, new_at = rule.split("-")
                 print('  Renaming {} to {}'.format(old_at, new_at))
                 if old_at in side_atoms:
                     mu.rename_atom(res, old_at, new_at)

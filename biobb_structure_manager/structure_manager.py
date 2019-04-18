@@ -114,10 +114,7 @@ class StructureManager():
 
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
-        if self.nmodels > 1:
-            self.models_type = mu.guess_models_type(self.st)
-        else:
-            self.models_type = 0
+        self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
 
         # Calc internal data
         self.update_internals()
@@ -182,7 +179,7 @@ class StructureManager():
         )
         #Precalc backbone . TODO Nucleic Acids
         self.check_backbone_connect(
-            ['N', 'C'],
+            ('N', 'C'),
             self.data_library.distances['COVLNK']
         )
 
@@ -259,12 +256,11 @@ class StructureManager():
 
     def get_ins_codes(self):
         """Makes a list with residues having insertion codes"""
-
-        ins_codes_list = []
-        for res in self.st.get_residues():
-            if mu.has_ins_code(res):
-                ins_codes_list.append(res)
-        return ins_codes_list
+        return [
+            res
+            for res in self.st.get_residues()
+            if mu.has_ins_code(res)
+        ]
 
     def get_metal_atoms(self):
         """ Makes a list of possible metal atoms"""
@@ -283,25 +279,23 @@ class StructureManager():
     def check_chiral_sides(self):
         """ Returns a list of wrong chiral side chains"""
         chiral_res = self.data_library.get_chiral_data()
-        chiral_list = []
-        for res in self.st.get_residues():
-            if res.get_resname() in chiral_res:
-                chiral_list.append(res)
+        chiral_list = [
+            res
+            for res in self.st.get_residues()
+            if res.get_resname() in chiral_res
+        ]
 
         if not chiral_list:
             return {}
 
-        chiral_res_to_fix = []
-
-        for res in chiral_list:
-            if not mu.check_chiral_residue(res, chiral_res):
-                chiral_res_to_fix.append(res)
-
         return {
             'list' : chiral_list,
-            'res_to_fix': chiral_res_to_fix,
+            'res_to_fix' : [
+                res
+                for res in chiral_list
+                if not mu.check_chiral_residue(res, chiral_res)
+            ]
         }
-
 
     def get_chiral_bck_list(self):
         """ Returns a list of residues with chiral CAs"""
@@ -322,16 +316,10 @@ class StructureManager():
             print("No residues with chiral CA found, skipping")
             return {'chiral_bck_list': []}
 
-        chiral_bck_res_to_fix = []
-        for res in chiral_bck_list:
-            if not mu.check_chiral_ca(res):
-                chiral_bck_res_to_fix.append(res)
-
         return {
             'list': chiral_bck_list,
-            'res_to_fix' : chiral_bck_res_to_fix,
+            'res_to_fix' : [res for res in chiral_bck_list if not mu.check_chiral_ca(res)]
         }
-
 
     def check_r_list_clashes(self, residue_list, contact_types):
         """ Checks clashes originated by a list of residues"""
@@ -373,7 +361,7 @@ class StructureManager():
                         miss_at['backbone'] = []
                     miss_at['backbone'].append('OXT')
                 if miss_at:
-                    miss_at_list.append([res, miss_at])
+                    miss_at_list.append((res, miss_at))
         return miss_at_list
 
     def get_missing_atoms(self, fragment):
@@ -385,14 +373,13 @@ class StructureManager():
         """
         miss_ats = []
         for res_at in self.check_missing_atoms():
-            [res, at_list] = res_at
+            res, at_list = res_at
             if fragment == 'side':
                 if 'side' in at_list and 'N' in res and 'CA' in res and 'C' in res:
-                    miss_ats.append([res, at_list['side']])
+                    miss_ats.append((res, at_list['side']))
             else:
                 if at_list['backbone']:
-                    miss_ats.append([res, at_list['backbone']])
-
+                    miss_ats.append((res, at_list['backbone']))
         return miss_ats
 
     def get_ion_res_list(self):
@@ -410,7 +397,7 @@ class StructureManager():
         for res in self.all_residues:
             rcode = res.get_resname()
             if rcode in ion_res:
-                ion_res_list.append([res, hydrogen_lists[rcode]])
+                ion_res_list.append((res, hydrogen_lists[rcode]))
         return ion_res_list
 
     def get_backbone_breaks(self):
@@ -499,20 +486,19 @@ class StructureManager():
             if 'CA' in res1 and 'C' in res1 and 'CA' in res2 and 'N' in res2:
                 dih = mu.calc_bond_dihedral(res1['CA'], res1['C'], res2['N'], res2['CA'])
                 if abs(dih) < CISTHRES:
-                    cis_backbone_list.append([res1, res2, dih])
+                    cis_backbone_list.append((res1, res2, dih))
                 elif abs(dih) < TRANSTHRES:
-                    lowtrans_backbone_list.append([res1, res2, dih])
-        return (cis_backbone_list, lowtrans_backbone_list)
+                    lowtrans_backbone_list.append((res1, res2, dih))
+        return cis_backbone_list, lowtrans_backbone_list
 
     def check_amide_contacts(self):
         """ Check close contacts involving amide atoms """
-        [amide_res, amide_atoms] = self.data_library.get_amide_data()
+        amide_res, amide_atoms = self.data_library.get_amide_data()
 
-        amide_list = set()
-
-        for res in self.st.get_residues():
-            if res.get_resname() in amide_res:
-                amide_list.add(res)
+        amide_list = set(
+            res for res in self.st.get_residues()
+            if res.get_resname() in amide_res
+        )
 
         if not amide_list:
             return {}
@@ -705,9 +691,7 @@ class StructureManager():
             Args:
                 keep_model: Model number to keep
         """
-        ids = []
-        for nmodel in self.st.get_models():
-            ids.append(nmodel.id)
+        ids = [nmodel.id for nmodel in self.st.get_models()]
         for ind, model_id in enumerate(ids):
             if ind != keep_model - 1:
                 self.st.detach_child(model_id)
@@ -836,7 +820,7 @@ class StructureManager():
                 Args:
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
         """
-        [res, at_list] = r_at
+        res, at_list = r_at
         print(mu.residue_id(res))
         if not 'C' in res:
             raise NotEnoughAtomsError
@@ -877,7 +861,7 @@ class StructureManager():
 
         # residues with alternative forms
         for r_at in r_at_list:
-            [res, opt] = r_at
+            res, opt = r_at
 
             if mu.is_hetatm(res):
                 continue
