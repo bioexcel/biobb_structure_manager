@@ -843,64 +843,48 @@ class StructureManager():
         self.modified = True
         return True
 
-    def add_hydrogens(self, r_at_list, remove_h=True):
+    def add_hydrogens(self, ion_res_list, remove_h=True):
         """
-        Add hydrogens according to selection in r_at_list
+        Add hydrogens considering selections in ion_res_list
 
         Args:
-           **r_at_list**: tuple as [Bio.PDB.Residue, Tauromeric Option]
-           **hydrogens_list**: Hydrogen atom names per residue type
+           **r_at_list**: dict as Bio.PDB.Residue: Tauromeric Option
+           **remove_h**: Remove Hydrogen atom before adding new ones
         """
         add_h_rules = self.data_library.get_add_h_rules()
-
-        done_side = set()
-
-        if remove_h:
-            for res in self.all_residues:
-                mu.remove_H_from_r(res, verbose=False)
-
-        # residues with alternative forms
-        for r_at in r_at_list:
-            res, opt = r_at
-
-            if mu.is_hetatm(res):
-                continue
-        # Skip residues without addH rules
-            if res.get_resname() not in add_h_rules:
-                print(NotAValidResidueError(res.get_resname()).message)
-                done_side.add(res)
-                continue
-            rcode = res.get_resname()
-            error_msg = mu.add_hydrogens_side(res, self.res_library, opt, add_h_rules[rcode][opt])
-            if error_msg:
-                print(error_msg, mu.residue_id(res))
-            res.resname = opt
-            done_side.add(res)
-
+        
         for res in self.all_residues:
             if mu.is_hetatm(res):
                 continue
 
-            rcode = res.get_resname()
+            if remove_h:
+                mu.remove_H_from_r(res, verbose=False)
 
             if res not in self.prev_residue:
                 prev_residue = None
             else:
                 prev_residue = self.prev_residue[res]
-
+            
             error_msg = mu.add_hydrogens_backbone(res, prev_residue)
+            
+            rcode = res.get_resname()
+            
+            if rcode == 'GLY':
+                continue
+            
+            if rcode not in add_h_rules:
+                print(NotAValidResidueError(rcode).message)
+                continue
+            print(res, res in ion_res_list)
+            if res in ion_res_list:
+                error_msg = mu.add_hydrogens_side(res, self.res_library, ion_res_list[res], add_h_rules[rcode][ion_res_list[res]])
+                res.resname = ion_res_list[res]
+            else:
+                error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, add_h_rules[rcode])
+                
             if error_msg:
                 print(error_msg, mu.residue_id(res))
-
-            if res not in done_side and rcode != 'GLY':
-                if rcode not in add_h_rules:
-                    print(NotAValidResidueError(rcode).message)
-                    continue
-
-                error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, add_h_rules[rcode])
-                if error_msg:
-                    print(error_msg, mu.residue_id(res))
-
+                
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified = True
