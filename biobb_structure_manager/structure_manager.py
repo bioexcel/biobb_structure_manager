@@ -364,6 +364,26 @@ class StructureManager():
                     miss_at_list.append((res, miss_at))
         return miss_at_list
 
+    def check_extra_atoms(self):
+        """ Makes a **list of extra atoms** in the structure
+
+            Returns:
+                List of residues with extra atoms, as a tuples
+                ["r",atoms_list]
+        """
+        #TODO Nucleic acids
+        valid_codes = self.data_library.get_valid_codes('protein')
+        residue_data = self.data_library.get_all_atom_lists()
+        extra_at_list = []
+        for res in self.st.get_residues():
+            if res.get_resname() in valid_codes and not mu.is_hetatm(res):
+                extra_ats = mu.check_unk_at_in_r(
+                    res, residue_data[res.get_resname().replace(' ', '')]
+                )
+                if extra_ats:
+                    extra_at_list.append((res, extra_ats))
+        return extra_at_list
+
     def get_missing_atoms(self, fragment):
         """ Returns list of residues with missing atoms
 
