@@ -46,9 +46,12 @@ HDIS = 1.08
 # TODO: consider replace by Bio.PDB equivalent
 ONE_LETTER_RESIDUE_CODE = {
     'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G',
-    'HIS':'H', 'HID':'H', 'HIE':'H', 'ILE':'I', 'LYS':'K', 'LEU':'L',
-    'MET':'M', 'ASN':'N', 'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S',
-    'THR':'T', 'VAL':'V', 'TRP':'W', 'TYR':'Y'
+    'HIS':'H', 'ILE':'I', 'LYS':'K', 'LEU':'L', 'MET':'M', 'ASN':'N', 
+    'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S', 'THR':'T', 'VAL':'V', 
+    'TRP':'W', 'TYR':'Y',
+    'HID':'H', 'HIE':'H', 'HIP':'H', 
+    'ARN':'R', 'LYN':'K', 'ASH':'D', 'GLH':'E', 
+    'CYX':'C', 'CYM':'C', 'TYM':'Y'
 }
 
 THREE_LETTER_RESIDUE_CODE = {

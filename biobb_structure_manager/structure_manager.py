@@ -875,8 +875,10 @@ class StructureManager():
             if rcode not in add_h_rules:
                 print(NotAValidResidueError(rcode).message)
                 continue
-            print(res, res in ion_res_list)
+
             if res in ion_res_list:
+                if rcode != ion_res_list[res]:
+                    print('Replacing {} by {}'.format(mu.residue_id(res), ion_res_list[res]))
                 error_msg = mu.add_hydrogens_side(res, self.res_library, ion_res_list[res], add_h_rules[rcode][ion_res_list[res]])
                 res.resname = ion_res_list[res]
             else:
