@@ -83,7 +83,8 @@ class MutationSet():
                             'model':model.get_id(),
                             'chain':chn,
                             'residue':res.get_id(),
-                            'new_id':self.new_id
+                            'new_id':self.new_id,
+                            'resobj': res
                         })
                         mut_ok += 1
                     else:
@@ -94,23 +95,22 @@ class MutationSet():
                         )
                 else:
                     print(
-                        '#WARNING: Unknown residue {}:{}{}', format(
+                        '#WARNING: Unknown residue {}:{}{}'.format(
                             chn, self.old_id, self.res_num
                         )
                     )
 
         if not mut_ok and stop_on_error:
-            print(
+            sys.exit(
                 '#ERROR: no mutations available for {}'.format(self.id), 
-                file=sys.stderr
             )
-            sys.exit(1)
 
     def apply(self, struc, mut_map, res_lib, remove_h):
         """ Perform the individual mutations on the set. """
         mutated_res = []
         for mut in self.mutations:
-            res = struc[mut['model']][mut['chain']][mut['residue']]
+            res = mut['resobj']
+            #struc[mut['model']][mut['chain']][mut['residue']]
             rname = res.get_resname().replace(' ', '')
             # Deleting H
             if remove_h == 'mut':
