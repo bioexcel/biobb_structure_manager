@@ -814,7 +814,11 @@ class StructureManager():
             mu.add_new_atom_to_residue(r_at[0], at_id, coords)
         self.atom_renumbering()
         self.modified = True
-
+    
+    def fix_backbone_chain(self, brk_list):
+        
+        return None
+    
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
