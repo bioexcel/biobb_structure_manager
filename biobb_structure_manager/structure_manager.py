@@ -102,7 +102,7 @@ class StructureManager():
 
         self.modified = False
         self.biounit = False
-
+        self.fixed_side = False
         self.file_format = file_format
 
         self.data_library = DataLibManager(data_library_path)
