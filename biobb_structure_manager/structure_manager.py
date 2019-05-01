@@ -8,6 +8,8 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
+from Bio.PDB.Polypeptide import PPBuilder
+from Bio.Seq import Seq, IUPAC
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager
@@ -835,8 +837,21 @@ class StructureManager():
         self.atom_renumbering()
         self.modified = True
     
-    def fix_backbone_chain(self, brk_list):
-        
+    def fix_backbone_chain(self, brk_list, key_modeller=''):
+        #os.environ['KEY_MODELLER9v21']=key_modeller
+        from biobb_structure_manager.modeller_manager import ModellerManager
+        mod_mgr = ModellerManager()
+        self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
+        mod_mgr.target_seq = Seq(self.headers['_entity_poly.pdbx_seq_one_letter_code'].replace('\n',''), IUPAC.protein)
+        ppb=PPBuilder()   
+        template_chains = []
+        for chn in self.st.get_chains():
+            seq = Seq('', IUPAC.protein)
+            for frag in ppb.build_peptides(chn):
+                seq += frag.get_sequence()
+            template_chains.append(seq)
+        mod_mgr.template_seq = template_chains
+        mod_mgr.prepare()
         return None
     
     def fix_backbone_O_atoms(self, r_at):
