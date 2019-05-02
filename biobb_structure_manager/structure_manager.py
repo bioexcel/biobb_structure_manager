@@ -834,11 +834,11 @@ class StructureManager():
             mu.add_new_atom_to_residue(r_at[0], at_id, coords)
         self.atom_renumbering()
         self.modified = True
-    
+
     def fix_backbone_chain(self, brk_list):
-        
+
         return None
-    
+
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
@@ -876,7 +876,7 @@ class StructureManager():
            **remove_h**: Remove Hydrogen atom before adding new ones
         """
         add_h_rules = self.data_library.get_add_h_rules()
-        
+
         for res in self.all_residues:
             if mu.is_hetatm(res):
                 continue
@@ -888,14 +888,14 @@ class StructureManager():
                 prev_residue = None
             else:
                 prev_residue = self.prev_residue[res]
-            
+
             error_msg = mu.add_hydrogens_backbone(res, prev_residue)
-            
+
             rcode = res.get_resname()
-            
+
             if rcode == 'GLY':
                 continue
-            
+
             if rcode not in add_h_rules:
                 print(NotAValidResidueError(rcode).message)
                 continue
@@ -907,10 +907,10 @@ class StructureManager():
                 res.resname = ion_res_list[res]
             else:
                 error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, add_h_rules[rcode])
-                
+
             if error_msg:
                 print(error_msg, mu.residue_id(res))
-                
+
         self.residue_renumbering()
         self.atom_renumbering()
         self.modified = True
@@ -932,7 +932,6 @@ class StructureManager():
     def apply_mutations(self, mutations):
         """ Perform mutations """
         mutated_res = mutations.apply_mutations(
-            self.st,
             self.data_library.get_mutation_map(),
             self.res_library
         )

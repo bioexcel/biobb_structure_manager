@@ -14,7 +14,7 @@ URL_PREFIX = 'http://mmb.irbbarcelona.org/api/pdb'
 
 class MMBPDBList(PDBList):
     """ Replacement class to support access to biounits at MMB PDB Server.
-        
+
         Modified from original BioPython code.
     """
 

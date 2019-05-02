@@ -28,17 +28,17 @@ class MutationManager():
 
         #convert to list ids to MutationSet instances and make the list
         self.mutation_list = list(map(MutationSet, self.id_list))
-    
+
     def prepare_mutations(self, struc, stop_on_error=True):
         """  Check mutation_list and unroll chains/models."""
         for mut in self.mutation_list:
             mut.prepare(struc, stop_on_error)
 
-    def apply_mutations(self, struc, mutation_map, residue_lib, remove_h='mut'):
+    def apply_mutations(self, mutation_map, residue_lib, remove_h='mut'):
         """ Perform the requestet mutations."""
         mutated_res = []
         for mut in self.mutation_list:
-            mutated_res += mut.apply(struc, mutation_map, residue_lib, remove_h)
+            mutated_res += mut.apply(mutation_map, residue_lib, remove_h)
         return mutated_res
 
     def __str__(self):
@@ -102,10 +102,10 @@ class MutationSet():
 
         if not mut_ok and stop_on_error:
             sys.exit(
-                '#ERROR: no mutations available for {}'.format(self.id), 
+                '#ERROR: no mutations available for {}'.format(self.id),
             )
 
-    def apply(self, struc, mut_map, res_lib, remove_h):
+    def apply(self, mut_map, res_lib, remove_h):
         """ Perform the individual mutations on the set. """
         mutated_res = []
         for mut in self.mutations:
