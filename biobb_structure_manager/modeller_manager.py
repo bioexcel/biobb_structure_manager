@@ -4,6 +4,7 @@ import sys
 import os
 import uuid
 from Bio import SeqIO
+from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
 
 try:
@@ -26,9 +27,10 @@ class ModellerManager():
     def prepare(self):
         print(vars(self))
         alin_file = self.tmpdir + "/alin.pir"
-        target_sqr = SeqRecord(self.target_seq)
-        target_sqr.id = "target"
-        SeqIO.write(target_sqr, alin_file, "pir")
-        SeqIO.write(SeqRecord(self.template_seq), alin_file, "pir")
+        #target 
+    #        target_sqr.id = "target"
+    #        SeqIO.write(target_sqr, alin_file, "pir")
+    #        SeqIO.write(SeqRecord(self.template_seq), alin_file, "pir")
+       
     def run(self):
         pass
