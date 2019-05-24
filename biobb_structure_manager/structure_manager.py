@@ -12,6 +12,7 @@ from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager
@@ -186,20 +187,27 @@ class StructureManager():
                         'csq_' + ch_id, 
                         'csq_' + ch_id, 
                         'canonical sequence chain ' + ch_id
-                    )
+                    ),
+                    'pdb': []
                 }
+                self.sequences[ch_id]['can'].features.append(
+                    SeqFeature(FeatureLocation(1,len(seqs[i])))
+                )
         ppb=PPBuilder()   
         for chn in self.st.get_chains():
             ch_id = chn.id
-            seq = Seq('', IUPAC.protein)
             for frag in ppb.build_peptides(chn):
-                seq += frag.get_sequence()            
-            self.sequences[ch_id]['pdb'] = SeqRecord(
-                seq,
-                'pdbsq_' + ch_id, 
-                'pdbsq_' + ch_id, 
-                'PDB sequence chain ' + ch_id
-            )
+                start = frag[0].get_id()[1]
+                end = frag[-1].get_id()[1]
+                frid = '{}{}-{}{}'.format(ch_id, start, ch_id, end)
+                sqr = SeqRecord(
+                    frag.get_sequence(),
+                    'pdbsq_' + frid,
+                    'pdbsq_' + frid, 
+                    'PDB sequence chain ' + frid
+                )
+                sqr.features.append(SeqFeature(FeatureLocation(start,end)))
+                self.sequences[ch_id]['pdb'].append(sqr)
 
     def update_internals(self):
         """ Update internal data when structure is modified """
