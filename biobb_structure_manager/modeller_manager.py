@@ -16,37 +16,54 @@ except:
 tmp_base_dir = '/tmp'
 database_file = '/home/gelpi/DEVEL/BioExcel/biobb/biobb_structure_checking/test/test_modeller/pdb_95.pir'
 class ModellerManager():
-    def __init__(self, ch_id, target_seq, ):
+    def __init__(self, ch_id, seqs):
 #        self.tmpdir = tmp_base_dir + "/mod" + str(uuid.uuid4())
         self.tmpdir = tmp_base_dir + "/modtest"
-        self.target = None
         self.ch_id = ch_id
-        self.target = target_seq
+        self.seqs = seqs
 #        try:
 #            os.mkdir(self.tmpdir)
 #        except IOError as e:
 #            sys.exit(e)
         self.env = environ()
-        self.env.io.atom_files_directory = [self.tmpdir]
+        self.env.io.atom_files_directory = [self.tmpdir]        
         
     def run(self):
-        tgt = self.target
-        tgt.id = 'target'
-        tgt.name = ''
-        tgt.description = 'sequence:target:::::::0.00: 0.00'
-        SeqIO.write(tgt, self.tmpdir + "/seqs.pir", 'pir')
+        tgt_seq = self.seqs['can'].seq
+        # Check N-term
+        pdb_seq = self.seqs['pdb'][0].seq
+        nt_pos = tgt_seq.find(pdb_seq)
+        tgt_seq = tgt_seq[nt_pos:]
         
-        aln = alignment(self.env)
-        mdl = model(
-            self.env, 
-            file='templ', 
-            model_segment=('FIRST:' + self.ch_id,'LAST:' + self.ch_id)
-        )
-        aln.append_model(mdl, align_codes='templ', atom_files='templ.pdb')
-        aln.append(file=self.tmpdir + '/seqs.pir', align_codes='target')
-        aln.align2d()
-        aln.write(file=self.tmpdir + '/alin.pir', alignment_format='PIR')
+        for i in range(1, len(self.seqs['pdb'])):
+            gap_len = self.seqs['pdb'][i].features[0].location.start\
+                - self.seqs['pdb'][i-1].features[0].location.end - 1 
+            pdb_seq += '-'*gap_len
+            pdb_seq += self.seqs['pdb'][i].seq
+        #pdb_seq += '-'*(len(tgt_seq) - len(pdb_seq))
+        tgt_seq = tgt_seq[0:len(pdb_seq)]
+        alin = [
+            SeqRecord(
+                tgt_seq, 
+                'target', 
+                '', 
+                'sequence:target:::::::0.00: 0.00'
+            ),
+            SeqRecord(
+                pdb_seq, 
+                'templ', 
+                '', 
+                'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
+                    self.seqs['pdb'][0].features[0].location.start, 
+                    self.ch_id,
+                    self.seqs['pdb'][-1].features[0].location.end, 
+                    self.ch_id
+                )
+            )
+        ]
         
+        SeqIO.write(alin, self.tmpdir + "/alin.pir", 'pir')
+
         a = automodel(
             self.env, 
             alnfile=self.tmpdir + "/alin.pir",
@@ -55,6 +72,6 @@ class ModellerManager():
             assess_methods=(assess.DOPE,assess.GA341)
         )
         a.starting_model = 1
-        a.ending_model = 5
+        a.ending_model = 1
         a.make()
         sys.exit()

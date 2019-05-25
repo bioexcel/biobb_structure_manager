@@ -894,7 +894,7 @@ class StructureManager():
         for ch_id in self.chain_ids:
             mod_mgr = ModellerManager(
                 ch_id,
-                self.sequences[ch_id]['can']
+                self.sequences[ch_id]
             )
             self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
             mod_mgr.run()
