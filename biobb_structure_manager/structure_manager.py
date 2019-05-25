@@ -104,6 +104,8 @@ class StructureManager():
         self.all_residues = []
         self.next_residue = {}
         self.prev_residue = {}
+        
+        self.sequences = {}
 
         self.modified = False
         self.biounit = False
@@ -179,11 +181,12 @@ class StructureManager():
         else:
             chids = self.headers['_entity_poly.pdbx_strand_id']
             seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
+
         for i in range(0,len(chids)):
             for ch_id in chids[i].split(','):
                 self.sequences[ch_id] = {
                     'can' : SeqRecord(
-                        Seq(seqs[i], IUPAC.protein), 
+                        Seq(seqs[i].replace('\n', ''), IUPAC.protein), 
                         'csq_' + ch_id, 
                         'csq_' + ch_id, 
                         'canonical sequence chain ' + ch_id
@@ -193,13 +196,14 @@ class StructureManager():
                 self.sequences[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1,len(seqs[i])))
                 )
+
         ppb=PPBuilder()   
         for chn in self.st.get_chains():
             ch_id = chn.id
             for frag in ppb.build_peptides(chn):
                 start = frag[0].get_id()[1]
                 end = frag[-1].get_id()[1]
-                frid = '{}{}-{}{}'.format(ch_id, start, ch_id, end)
+                frid = '{}:{}-{}'.format(ch_id, start, end)
                 sqr = SeqRecord(
                     frag.get_sequence(),
                     'pdbsq_' + frid,
@@ -887,9 +891,14 @@ class StructureManager():
     def fix_backbone_chain(self, brk_list, key_modeller=''):
         #os.environ['KEY_MODELLER9v21']=key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
-        mod_mgr = ModellerManager()
-        #self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
-        #TODO
+        for ch_id in self.chain_ids:
+            mod_mgr = ModellerManager(
+                ch_id,
+                self.sequences[ch_id]['can']
+            )
+            self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
+            mod_mgr.run()
+                
         return None
 
     def fix_backbone_O_atoms(self, r_at):
