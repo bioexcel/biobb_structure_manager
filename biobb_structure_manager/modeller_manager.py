@@ -73,5 +73,9 @@ class ModellerManager():
         )
         a.starting_model = 1
         a.ending_model = 1
+        orig_dir = os.getcwd()
+        os.chdir(self.tmpdir)
         a.make()
-        sys.exit()
+        os.chdir(orig_dir)
+        return a.outputs[0]
+

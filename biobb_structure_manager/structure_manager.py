@@ -10,6 +10,7 @@ from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Polypeptide import PPBuilder
+from Bio.PDB.Superimposer import Superimposer
 from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
@@ -889,6 +890,7 @@ class StructureManager():
         self.modified = True
     
     def fix_backbone_chain(self, brk_list, key_modeller=''):
+        fixed = []
         #os.environ['KEY_MODELLER9v21']=key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
         for ch_id in self.chain_ids:
@@ -897,10 +899,52 @@ class StructureManager():
                 self.sequences[ch_id]
             )
             self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
-            mod_mgr.run()
-                
-        return None
-
+            model_pdb = mod_mgr.run()
+            parser = PDBParser(PERMISSIVE=1)
+            model_st = parser.get_structure(
+                'model_st', 
+                mod_mgr.tmpdir + "/" + model_pdb['name']
+            )
+            self.merge_structure(
+                model_st, 
+                ch_id,
+                self.sequences[ch_id]['pdb'][0].features[0].location.start
+            )
+            fixed.append((ch_id, self.sequences[ch_id]['pdb'][0].features[0].location))
+        self.update_internals()
+        
+        self.save_structure(mod_mgr.tmpdir + "/FINAL.pdb")
+        sys.exit()
+        return fixed
+    
+    def merge_structure(self, new_st, ch_id, offset):
+        spimp = Superimposer()
+        fixed_ats = [atm for atm in self.st[0][ch_id].get_atoms() if atm.id == 'CA']
+        moving_ats = []
+        for atm in fixed_ats:
+            moving_ats.append(new_st[0][' '][atm.get_parent().id[1] - offset + 1]['CA'])
+        spimp.set_atoms(fixed_ats, moving_ats)
+        spimp.apply(new_st.get_atoms())
+        
+        list_res = self.st[0][ch_id].get_list()
+        
+        for i in range(0, len(self.sequences[ch_id]['pdb'])-1):
+            gap_start = self.sequences[ch_id]['pdb'][i].features[0].location.end
+            gap_end = self.sequences[ch_id]['pdb'][i+1].features[0].location.start
+            pos = 0
+            while pos < len(list_res) and self.st[0][ch_id].child_list[pos].id[1] != gap_start:
+                pos += 1
+            self.remove_residue(self.st[0][ch_id][gap_start], update_int=False)
+            self.remove_residue(self.st[0][ch_id][gap_end], update_int=False)
+            for nres in range(gap_start, gap_end + 1):
+                res = new_st[0][' '][nres - offset + 1].copy()
+                res.id = (' ', nres, ' ')
+                self.st[0][ch_id].insert(pos, res)
+                pos += 1
+                print("Adding " + mu.residue_id(res))
+            print ('{}-{}:{}-{}'.format(gap_start, gap_end, gap_start-offset+1, gap_end-offset+1))
+        
+        
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
