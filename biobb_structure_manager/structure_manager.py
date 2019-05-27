@@ -918,13 +918,13 @@ class StructureManager():
         fixed = []
         #os.environ['KEY_MODELLER9v21']=key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
+
+        mod_mgr = ModellerManager()
+        mod_mgr.seqs = self.sequences
+        self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
+        
         for ch_id in self.chain_ids:
-            mod_mgr = ModellerManager(
-                ch_id,
-                self.sequences[ch_id]
-            )
-            self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
-            model_pdb = mod_mgr.run()
+            model_pdb = mod_mgr.build(ch_id)
             parser = PDBParser(PERMISSIVE=1)
             model_st = parser.get_structure(
                 'model_st', 

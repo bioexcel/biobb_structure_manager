@@ -16,11 +16,11 @@ except:
 tmp_base_dir = '/tmp'
 database_file = '/home/gelpi/DEVEL/BioExcel/biobb/biobb_structure_checking/test/test_modeller/pdb_95.pir'
 class ModellerManager():
-    def __init__(self, ch_id, seqs):
+    def __init__(self):
 #        self.tmpdir = tmp_base_dir + "/mod" + str(uuid.uuid4())
         self.tmpdir = tmp_base_dir + "/modtest"
-        self.ch_id = ch_id
-        self.seqs = seqs
+        self.ch_id = ''
+        self.seqs = ''
 #        try:
 #            os.mkdir(self.tmpdir)
 #        except IOError as e:
@@ -28,46 +28,54 @@ class ModellerManager():
         self.env = environ()
         self.env.io.atom_files_directory = [self.tmpdir]        
         
-    def run(self):
-        tgt_seq = self.seqs['can'].seq
+    def build(self, target_chain):
+        tgt_seq = self.seqs[target_chain]['can'].seq
+        templs = []
+        knowns = []
         # Check N-term
-        pdb_seq = self.seqs['pdb'][0].seq
-        nt_pos = tgt_seq.find(pdb_seq)
-        tgt_seq = tgt_seq[nt_pos:]
+        for ch_id in self.seqs[target_chain]['chains']:
+            pdb_seq = self.seqs[ch_id]['pdb'][0].seq
+            
+            if ch_id == target_chain:
+                nt_pos = tgt_seq.find(pdb_seq)
+                tgt_seq = tgt_seq[nt_pos:]
         
-        for i in range(1, len(self.seqs['pdb'])):
-            gap_len = self.seqs['pdb'][i].features[0].location.start\
-                - self.seqs['pdb'][i-1].features[0].location.end - 1 
-            pdb_seq += '-'*gap_len
-            pdb_seq += self.seqs['pdb'][i].seq
-        #pdb_seq += '-'*(len(tgt_seq) - len(pdb_seq))
-        tgt_seq = tgt_seq[0:len(pdb_seq)]
-        alin = [
-            SeqRecord(
-                tgt_seq, 
-                'target', 
-                '', 
-                'sequence:target:::::::0.00: 0.00'
-            ),
-            SeqRecord(
-                pdb_seq, 
-                'templ', 
-                '', 
-                'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
-                    self.seqs['pdb'][0].features[0].location.start, 
-                    self.ch_id,
-                    self.seqs['pdb'][-1].features[0].location.end, 
-                    self.ch_id
+            for i in range(1, len(self.seqs[ch_id]['pdb'])):
+                gap_len = self.seqs[ch_id]['pdb'][i].features[0].location.start\
+                    - self.seqs[ch_id]['pdb'][i-1].features[0].location.end - 1 
+                pdb_seq += '-'*gap_len
+                pdb_seq += self.seqs[ch_id]['pdb'][i].seq
+        
+            templs.append(
+                SeqRecord(
+                    pdb_seq, 
+                    'templ' + ch_id, 
+                    '', 
+                    'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
+                        self.seqs[ch_id]['pdb'][0].features[0].location.start, 
+                        ch_id,
+                        self.seqs[ch_id]['pdb'][-1].features[0].location.end, 
+                        ch_id
+                    )
                 )
             )
-        ]
-        
-        SeqIO.write(alin, self.tmpdir + "/alin.pir", 'pir')
+            knowns.append('templ' + ch_id)
+            if ch_id == target_chain:
+                tgt_seq = tgt_seq[0:len(pdb_seq)]
+        SeqIO.write (
+            [
+                SeqRecord(
+                    tgt_seq, 
+                    'target', 
+                    '', 
+                    'sequence:target:::::::0.00: 0.00'
+                )
+            ] + templs, self.tmpdir + "/alin.pir", 'pir')
 
         a = automodel(
             self.env, 
             alnfile=self.tmpdir + "/alin.pir",
-            knowns='templ',
+            knowns=knowns,
             sequence='target',
             assess_methods=(assess.DOPE,assess.GA341)
         )
