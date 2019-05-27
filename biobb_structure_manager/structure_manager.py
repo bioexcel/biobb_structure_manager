@@ -938,7 +938,9 @@ class StructureManager():
             fixed.append((ch_id, self.sequences[ch_id]['pdb'][0].features[0].location))
         self.update_internals()
         
-        self.save_structure(mod_mgr.tmpdir + "/FINAL.pdb")
+        self.save_structure("FINAL.pdb")
+        
+        
         sys.exit()
         return fixed
     

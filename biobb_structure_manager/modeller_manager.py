@@ -3,6 +3,7 @@
 import sys
 import os
 import uuid
+import shutil
 from Bio import SeqIO
 from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
@@ -17,16 +18,17 @@ tmp_base_dir = '/tmp'
 database_file = '/home/gelpi/DEVEL/BioExcel/biobb/biobb_structure_checking/test/test_modeller/pdb_95.pir'
 class ModellerManager():
     def __init__(self):
-#        self.tmpdir = tmp_base_dir + "/mod" + str(uuid.uuid4())
-        self.tmpdir = tmp_base_dir + "/modtest"
+        self.tmpdir = tmp_base_dir + "/mod" + str(uuid.uuid4())
         self.ch_id = ''
         self.seqs = ''
-#        try:
-#            os.mkdir(self.tmpdir)
-#        except IOError as e:
-#            sys.exit(e)
+        try:
+            os.mkdir(self.tmpdir)
+        except IOError as e:
+            sys.exit(e)
         self.env = environ()
         self.env.io.atom_files_directory = [self.tmpdir]        
+        print(self.env)
+        sys.exit()
         
     def build(self, target_chain):
         tgt_seq = self.seqs[target_chain]['can'].seq
@@ -86,4 +88,8 @@ class ModellerManager():
         a.make()
         os.chdir(orig_dir)
         return a.outputs[0]
+    
+        
 
+    def __del__(self):
+        shutil.rmtree(self.tmpdir)
