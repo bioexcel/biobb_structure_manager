@@ -12,6 +12,7 @@ from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.PDB.Superimposer import Superimposer
 from Bio.Seq import Seq, IUPAC
+from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from biobb_structure_manager.mmb_server import MMBPDBList
@@ -48,7 +49,9 @@ class StructureManager():
             res_library_path,
             pdb_server='ftp://ftp.wwpdb.org',
             cache_dir='tmpPDB',
-            file_format='mmCif'):
+            file_format='mmCif',
+            fasta_sequence_path=''):
+                
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
@@ -56,9 +59,13 @@ class StructureManager():
             **input_pdb_path** (str): path to input structure either in pdb or
             mmCIF format. Format is taken from file extension.
             Alternatively **pdb:pdbId** fetches the mmCIF file from RCSB
-
+            **data_library_path**: Path to json data library
+            **res_library_path**: Path to residue library
             **pdb_server** (str) :  **default** for Bio.PDB defaults (RCSB),
                                     **mmb** for MMB PDB API
+            **cache_dir**: path to temporary dir to store downloaded structures
+            **file_format**: structure file format to use
+            **fasta_sequence_path**: path to canonical sequence file (needed for PDB input)
 
         Object structure:
             {
@@ -119,7 +126,11 @@ class StructureManager():
         self.input_format = self._load_structure_file(
             input_pdb_path, cache_dir, pdb_server, file_format
         )
-
+        self.fasta = []
+        
+        if fasta_sequence_path: 
+            for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
+                self.fasta.append(record)
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
         self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
@@ -170,18 +181,28 @@ class StructureManager():
         return input_format
     
     def _get_sequences(self):
-        """ Extract sequences from structure, requires mmCIF, only protein"""
+        """ Extract sequences from structure, requires mmCIF or external fasta, only protein"""
         self.sequences = {}
-        if self.input_format != 'cif':
-            print ("Warning: sequence features only available in mmCIF format")
-            return 1
-        #TODO check for NA
-        if not isinstance(self.headers['_entity_poly.pdbx_strand_id'], list):
-            chids = [self.headers['_entity_poly.pdbx_strand_id']]
-            seqs = [self.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
+        
+        if self.fasta:
+            chids = []
+            seqs = []
+            for rec in self.fasta:
+                (pdbid, ch_list) = rec.id.split('_')
+                chids.append(ch_list)
+                seqs.append(str(rec.seq))
         else:
-            chids = self.headers['_entity_poly.pdbx_strand_id']
-            seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
+            if self.input_format != 'cif':
+                print ("Warning: sequence features only available in mmCIF format or with external fasta input")
+                return 1
+            #TODO check for NA
+        
+            if not isinstance(self.headers['_entity_poly.pdbx_strand_id'], list):
+                chids = [self.headers['_entity_poly.pdbx_strand_id']]
+                seqs = [self.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
+            else:
+                chids = self.headers['_entity_poly.pdbx_strand_id']
+                seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
 
         for i in range(0,len(chids)):
             for ch_id in chids[i].split(','):
@@ -192,6 +213,7 @@ class StructureManager():
                         'csq_' + ch_id, 
                         'canonical sequence chain ' + ch_id
                     ),
+                    'chains': chids[i].split(','),
                     'pdb': []
                 }
                 self.sequences[ch_id]['can'].features.append(
@@ -216,6 +238,10 @@ class StructureManager():
 
     def update_internals(self):
         """ Update internal data when structure is modified """
+        
+        # get canonical and structure sequences
+        self._get_sequences()
+
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
         #Atom renumbering for mmCIF, PDB uses atom number in file
@@ -235,7 +261,6 @@ class StructureManager():
             ('N', 'C'),
             self.data_library.distances['COVLNK']
         )
-        self._get_sequences()
 
     def residue_renumbering(self):
         """Sets the Bio.PDB.Residue.index attribute to residues for a unique,
