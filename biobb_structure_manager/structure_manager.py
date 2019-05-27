@@ -51,7 +51,7 @@ class StructureManager():
             cache_dir='tmpPDB',
             file_format='mmCif',
             fasta_sequence_path=''):
-                
+
         """Class constructor. Sets an empty object and loads a structure
         according to parameters
 
@@ -112,7 +112,7 @@ class StructureManager():
         self.all_residues = []
         self.next_residue = {}
         self.prev_residue = {}
-        
+
         self.sequences = {}
 
         self.modified = False
@@ -127,10 +127,11 @@ class StructureManager():
             input_pdb_path, cache_dir, pdb_server, file_format
         )
         self.fasta = []
-        
-        if fasta_sequence_path: 
+
+        if fasta_sequence_path:
             for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
                 self.fasta.append(record)
+
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
         self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
@@ -171,32 +172,35 @@ class StructureManager():
             input_format = 'cif'
         else:
             raise UnknownFileTypeError(input_pdb_path)
+
         warnings.simplefilter('ignore', BiopythonWarning)
+
         self.st = parser.get_structure('st', real_pdb_path)
+
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
         else:
             self.headers = MMCIF2Dict(real_pdb_path)
 
         return input_format
-    
+
     def _get_sequences(self):
         """ Extract sequences from structure, requires mmCIF or external fasta, only protein"""
         self.sequences = {}
-        
+
         if self.fasta:
             chids = []
             seqs = []
             for rec in self.fasta:
-                (pdbid, ch_list) = rec.id.split('_')
-                chids.append(ch_list)
+                chids.append(rec.id.split('_')[1])
                 seqs.append(str(rec.seq))
         else:
             if self.input_format != 'cif':
-                print ("Warning: sequence features only available in mmCIF format or with external fasta input")
+                print("Warning: sequence features only available in mmCIF" +\
+                    " format or with external fasta input")
                 return 1
             #TODO check for NA
-        
+
             if not isinstance(self.headers['_entity_poly.pdbx_strand_id'], list):
                 chids = [self.headers['_entity_poly.pdbx_strand_id']]
                 seqs = [self.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
@@ -204,23 +208,23 @@ class StructureManager():
                 chids = self.headers['_entity_poly.pdbx_strand_id']
                 seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
 
-        for i in range(0,len(chids)):
+        for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
                 self.sequences[ch_id] = {
                     'can' : SeqRecord(
-                        Seq(seqs[i].replace('\n', ''), IUPAC.protein), 
-                        'csq_' + ch_id, 
-                        'csq_' + ch_id, 
+                        Seq(seqs[i].replace('\n', ''), IUPAC.protein),
+                        'csq_' + ch_id,
+                        'csq_' + ch_id,
                         'canonical sequence chain ' + ch_id
                     ),
                     'chains': chids[i].split(','),
                     'pdb': []
                 }
                 self.sequences[ch_id]['can'].features.append(
-                    SeqFeature(FeatureLocation(1,len(seqs[i])))
+                    SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
 
-        ppb=PPBuilder()   
+        ppb = PPBuilder()
         for chn in self.st.get_chains():
             ch_id = chn.id
             for frag in ppb.build_peptides(chn):
@@ -230,15 +234,16 @@ class StructureManager():
                 sqr = SeqRecord(
                     frag.get_sequence(),
                     'pdbsq_' + frid,
-                    'pdbsq_' + frid, 
+                    'pdbsq_' + frid,
                     'PDB sequence chain ' + frid
                 )
-                sqr.features.append(SeqFeature(FeatureLocation(start,end)))
+                sqr.features.append(SeqFeature(FeatureLocation(start, end)))
                 self.sequences[ch_id]['pdb'].append(sqr)
+        return 0
 
     def update_internals(self):
         """ Update internal data when structure is modified """
-        
+
         # get canonical and structure sequences
         self._get_sequences()
 
@@ -553,10 +558,9 @@ class StructureManager():
             backbone_atoms: atoms to be considered as backbone
             COVLNK: Threshold distance for a covalent bond
         """
-        if not self.backbone_links:
-            self.backbone_links = mu.get_backbone_links(
-                self.st, backbone_atoms, covlnk
-            )
+        self.backbone_links = mu.get_backbone_links(
+            self.st, backbone_atoms, covlnk
+        )
         self.next_residue = {}
         self.prev_residue = {}
         for lnk in self.backbone_links:
@@ -688,6 +692,7 @@ class StructureManager():
             self.meta['biounit'] = self.biounit
 
     def print_model_stats(self, prefix=''):
+        """ Print stats """
         if self.nmodels > 1:
             print(
                 '{} Num. models: {} (type: {}, {:8.3f} A)'.format(
@@ -701,6 +706,7 @@ class StructureManager():
             print('{} Num. models: {}'.format(prefix, self.nmodels))
 
     def print_chain_stats(self, prefix=''):
+        """ Print chains info """
         chids = []
         for ch_id in sorted(self.chain_ids):
             if isinstance(self.chain_ids[ch_id], list):
@@ -913,37 +919,41 @@ class StructureManager():
             mu.add_new_atom_to_residue(r_at[0], at_id, coords)
         self.atom_renumbering()
         self.modified = True
-    
+
     def fix_backbone_chain(self, brk_list, key_modeller=''):
+        """ Fixes backbone breaks using Modeller """
         fixed = []
         #os.environ['KEY_MODELLER9v21']=key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
+        ch_to_fix = set()
+        for brk in brk_list:
+            ch_to_fix.add(brk[0].get_parent().id)
 
         mod_mgr = ModellerManager()
         mod_mgr.seqs = self.sequences
         self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
-        
+
         for ch_id in self.chain_ids:
+            if ch_id not in ch_to_fix:
+                continue
+            print("Fixing backbone of chain " + ch_id)
             model_pdb = mod_mgr.build(ch_id)
             parser = PDBParser(PERMISSIVE=1)
             model_st = parser.get_structure(
-                'model_st', 
+                'model_st',
                 mod_mgr.tmpdir + "/" + model_pdb['name']
             )
             self.merge_structure(
-                model_st, 
+                model_st,
                 ch_id,
                 self.sequences[ch_id]['pdb'][0].features[0].location.start
             )
+
             fixed.append((ch_id, self.sequences[ch_id]['pdb'][0].features[0].location))
+
         self.update_internals()
-        
-        self.save_structure("FINAL.pdb")
-        
-        
-        sys.exit()
         return fixed
-    
+
     def merge_structure(self, new_st, ch_id, offset):
         spimp = Superimposer()
         fixed_ats = [atm for atm in self.st[0][ch_id].get_atoms() if atm.id == 'CA']
@@ -952,9 +962,9 @@ class StructureManager():
             moving_ats.append(new_st[0][' '][atm.get_parent().id[1] - offset + 1]['CA'])
         spimp.set_atoms(fixed_ats, moving_ats)
         spimp.apply(new_st.get_atoms())
-        
+
         list_res = self.st[0][ch_id].get_list()
-        
+
         for i in range(0, len(self.sequences[ch_id]['pdb'])-1):
             gap_start = self.sequences[ch_id]['pdb'][i].features[0].location.end
             gap_end = self.sequences[ch_id]['pdb'][i+1].features[0].location.start
@@ -969,9 +979,10 @@ class StructureManager():
                 self.st[0][ch_id].insert(pos, res)
                 pos += 1
                 print("Adding " + mu.residue_id(res))
-            print ('{}-{}:{}-{}'.format(gap_start, gap_end, gap_start-offset+1, gap_end-offset+1))
-        
-        
+            print()
+#            print ('{}-{}:{}-{}'.format(gap_start, gap_end, gap_start-offset+1, gap_end-offset+1))
+
+
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
@@ -1035,8 +1046,17 @@ class StructureManager():
 
             if res in ion_res_list:
                 if rcode != ion_res_list[res]:
-                    print('Replacing {} by {}'.format(mu.residue_id(res), ion_res_list[res]))
-                error_msg = mu.add_hydrogens_side(res, self.res_library, ion_res_list[res], add_h_rules[rcode][ion_res_list[res]])
+                    print(
+                        'Replacing {} by {}'.format(
+                            mu.residue_id(res), ion_res_list[res]
+                        )
+                    )
+                error_msg = mu.add_hydrogens_side(
+                    res,
+                    self.res_library,
+                    ion_res_list[res],
+                    add_h_rules[rcode][ion_res_list[res]]
+                )
                 res.resname = ion_res_list[res]
             else:
                 error_msg = mu.add_hydrogens_side(res, self.res_library, rcode, add_h_rules[rcode])

@@ -5,7 +5,6 @@ import os
 import uuid
 import shutil
 from Bio import SeqIO
-from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
 
 try:
@@ -14,49 +13,50 @@ try:
 except:
     sys.exit("Error importing modeller")
 
-tmp_base_dir = '/tmp'
-database_file = '/home/gelpi/DEVEL/BioExcel/biobb/biobb_structure_checking/test/test_modeller/pdb_95.pir'
+TMP_BASE_DIR = '/tmp'
+
 class ModellerManager():
+    """ Class to handle Modeller calculations """
     def __init__(self):
-        self.tmpdir = tmp_base_dir + "/mod" + str(uuid.uuid4())
+        self.tmpdir = TMP_BASE_DIR + "/mod" + str(uuid.uuid4())
         self.ch_id = ''
         self.seqs = ''
         try:
             os.mkdir(self.tmpdir)
-        except IOError as e:
-            sys.exit(e)
+        except IOError as err:
+            sys.exit(err)
         self.env = environ()
-        self.env.io.atom_files_directory = [self.tmpdir]        
-        print(self.env)
-        sys.exit()
-        
+        self.env.io.atom_files_directory = [self.tmpdir]
+        log.none()
+
     def build(self, target_chain):
+        """ Prepares Modeller input and builds the model """
         tgt_seq = self.seqs[target_chain]['can'].seq
         templs = []
         knowns = []
         # Check N-term
         for ch_id in self.seqs[target_chain]['chains']:
             pdb_seq = self.seqs[ch_id]['pdb'][0].seq
-            
+
             if ch_id == target_chain:
                 nt_pos = tgt_seq.find(pdb_seq)
                 tgt_seq = tgt_seq[nt_pos:]
-        
+
             for i in range(1, len(self.seqs[ch_id]['pdb'])):
                 gap_len = self.seqs[ch_id]['pdb'][i].features[0].location.start\
-                    - self.seqs[ch_id]['pdb'][i-1].features[0].location.end - 1 
+                    - self.seqs[ch_id]['pdb'][i-1].features[0].location.end - 1
                 pdb_seq += '-'*gap_len
                 pdb_seq += self.seqs[ch_id]['pdb'][i].seq
-        
+
             templs.append(
                 SeqRecord(
-                    pdb_seq, 
-                    'templ' + ch_id, 
-                    '', 
+                    pdb_seq,
+                    'templ' + ch_id,
+                    '',
                     'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
-                        self.seqs[ch_id]['pdb'][0].features[0].location.start, 
+                        self.seqs[ch_id]['pdb'][0].features[0].location.start,
                         ch_id,
-                        self.seqs[ch_id]['pdb'][-1].features[0].location.end, 
+                        self.seqs[ch_id]['pdb'][-1].features[0].location.end,
                         ch_id
                     )
                 )
@@ -64,32 +64,32 @@ class ModellerManager():
             knowns.append('templ' + ch_id)
             if ch_id == target_chain:
                 tgt_seq = tgt_seq[0:len(pdb_seq)]
-        SeqIO.write (
+        SeqIO.write(
             [
                 SeqRecord(
-                    tgt_seq, 
-                    'target', 
-                    '', 
+                    tgt_seq,
+                    'target',
+                    '',
                     'sequence:target:::::::0.00: 0.00'
                 )
             ] + templs, self.tmpdir + "/alin.pir", 'pir')
 
-        a = automodel(
-            self.env, 
+        amdl = automodel(
+            self.env,
             alnfile=self.tmpdir + "/alin.pir",
             knowns=knowns,
             sequence='target',
-            assess_methods=(assess.DOPE,assess.GA341)
+            assess_methods=(assess.DOPE, assess.GA341)
         )
-        a.starting_model = 1
-        a.ending_model = 1
+        amdl.starting_model = 1
+        amdl.ending_model = 1
+
         orig_dir = os.getcwd()
         os.chdir(self.tmpdir)
-        a.make()
+        amdl.make()
         os.chdir(orig_dir)
-        return a.outputs[0]
-    
-        
+
+        return amdl.outputs[0]
 
     def __del__(self):
         shutil.rmtree(self.tmpdir)
