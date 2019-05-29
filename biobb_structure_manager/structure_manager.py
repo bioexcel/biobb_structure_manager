@@ -37,7 +37,7 @@ AMIDE_CONTACT_TYPES = [
     'polar_acceptor',
     'polar_donor',
 ]
-   
+
 class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
@@ -229,7 +229,7 @@ class StructureManager():
             ppb = PPBuilder()
             for chn in mod.get_chains():
                 seqs = []
-                #self.sequences[ch_id]['pdb'][mod.id] = [1]                
+                #self.sequences[ch_id]['pdb'][mod.id] = [1]
                 ch_id = chn.id
                 for frag in ppb.build_peptides(chn):
                     start = frag[0].get_id()[1]
@@ -771,7 +771,7 @@ class StructureManager():
         if not output_pdb_path:
             raise OutputPathNotProvidedError
         pdbio = PDBIO()
-        
+
         if mod_id is None:
             pdbio.set_structure(self.st)
             pdbio.save(output_pdb_path)
@@ -934,15 +934,18 @@ class StructureManager():
 
     def fix_backbone_chain(self, brk_list, key_modeller=''):
         """ Fixes backbone breaks using Modeller """
-        fixed = []
-        #os.environ['KEY_MODELLER9v21']=key_modeller
+        if key_modeller:
+            os.environ['KEY_MODELLER9v21']=key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
+
         ch_to_fix = set()
         for brk in brk_list:
             ch_to_fix.add(brk[0].get_parent().id)
 
         mod_mgr = ModellerManager()
         mod_mgr.seqs = self.sequences
+
+        fixed_segments = []
         for mod in self.st:
             if self.has_models():
                 print('Processing Model {}'.format(mod.id + 1))
@@ -959,17 +962,17 @@ class StructureManager():
                     'model_st',
                     mod_mgr.tmpdir + "/" + model_pdb['name']
                 )
-                self.merge_structure(
+                fixed_gaps = self.merge_structure(
                     model_st,
                     mod.id,
                     ch_id,
                     self.sequences[ch_id]['pdb'][mod.id][0].features[0].location.start
                 )
-
-                fixed.append((ch_id, self.sequences[ch_id]['pdb'][mod.id][0].features[0].location))
+                fixed_segments += fixed_gaps
 
         self.update_internals()
-        return fixed
+
+        return fixed_segments
 
 
     def merge_structure(self, new_st, mod_id, ch_id, offset):
@@ -982,7 +985,7 @@ class StructureManager():
         spimp.apply(new_st.get_atoms())
 
         list_res = self.st[mod_id][ch_id].get_list()
-
+        fixed_gaps = []
         for i in range(0, len(self.sequences[ch_id]['pdb'][mod_id])-1):
             gap_start = self.sequences[ch_id]['pdb'][mod_id][i].features[0].location.end
             gap_end = self.sequences[ch_id]['pdb'][mod_id][i+1].features[0].location.start
@@ -997,9 +1000,11 @@ class StructureManager():
                 self.st[mod_id][ch_id].insert(pos, res)
                 pos += 1
                 print("Adding " + mu.residue_id(res))
+            fixed_gaps.append(
+                '{}{}-{}{}/{}'.format(ch_id, gap_start, ch_id, gap_end, mod_id + 1)
+            )
             print()
-#            print ('{}-{}:{}-{}'.format(gap_start, gap_end, gap_start-offset+1, gap_end-offset+1))
-
+        return fixed_gaps
 
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT

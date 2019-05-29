@@ -19,7 +19,7 @@ class ModellerManager():
     """ Class to handle Modeller calculations """
     def __init__(self):
         self.tmpdir = TMP_BASE_DIR + "/mod" + str(uuid.uuid4())
-        self.tmpdir = "/tmp/modtest"
+        #self.tmpdir = "/tmp/modtest"
         self.ch_id = ''
         self.seqs = ''
         try:
