@@ -19,6 +19,7 @@ class ModellerManager():
     """ Class to handle Modeller calculations """
     def __init__(self):
         self.tmpdir = TMP_BASE_DIR + "/mod" + str(uuid.uuid4())
+        self.tmpdir = "/tmp/modtest"
         self.ch_id = ''
         self.seqs = ''
         try:
@@ -29,24 +30,24 @@ class ModellerManager():
         self.env.io.atom_files_directory = [self.tmpdir]
         log.none()
 
-    def build(self, target_chain):
+    def build(self, target_model, target_chain):
         """ Prepares Modeller input and builds the model """
         tgt_seq = self.seqs[target_chain]['can'].seq
         templs = []
         knowns = []
         # Check N-term
         for ch_id in self.seqs[target_chain]['chains']:
-            pdb_seq = self.seqs[ch_id]['pdb'][0].seq
+            pdb_seq = self.seqs[ch_id]['pdb'][target_model][0].seq
 
             if ch_id == target_chain:
                 nt_pos = tgt_seq.find(pdb_seq)
                 tgt_seq = tgt_seq[nt_pos:]
 
-            for i in range(1, len(self.seqs[ch_id]['pdb'])):
-                gap_len = self.seqs[ch_id]['pdb'][i].features[0].location.start\
-                    - self.seqs[ch_id]['pdb'][i-1].features[0].location.end - 1
+            for i in range(1, len(self.seqs[ch_id]['pdb'][target_model])):
+                gap_len = self.seqs[ch_id]['pdb'][target_model][i].features[0].location.start\
+                    - self.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
                 pdb_seq += '-'*gap_len
-                pdb_seq += self.seqs[ch_id]['pdb'][i].seq
+                pdb_seq += self.seqs[ch_id]['pdb'][target_model][i].seq
 
             templs.append(
                 SeqRecord(
@@ -54,9 +55,9 @@ class ModellerManager():
                     'templ' + ch_id,
                     '',
                     'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
-                        self.seqs[ch_id]['pdb'][0].features[0].location.start,
+                        self.seqs[ch_id]['pdb'][target_model][0].features[0].location.start,
                         ch_id,
-                        self.seqs[ch_id]['pdb'][-1].features[0].location.end,
+                        self.seqs[ch_id]['pdb'][target_model][-1].features[0].location.end,
                         ch_id
                     )
                 )

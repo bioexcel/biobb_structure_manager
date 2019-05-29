@@ -6,7 +6,7 @@ import sys
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
-from Bio.PDB.PDBIO import PDBIO
+from Bio.PDB.PDBIO import PDBIO, Select
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Polypeptide import PPBuilder
@@ -37,7 +37,7 @@ AMIDE_CONTACT_TYPES = [
     'polar_acceptor',
     'polar_donor',
 ]
-
+   
 class StructureManager():
     """Main Class wrapping Bio.PDB structure object
     """
@@ -218,27 +218,32 @@ class StructureManager():
                         'canonical sequence chain ' + ch_id
                     ),
                     'chains': chids[i].split(','),
-                    'pdb': []
+                    'pdb': {}
                 }
                 self.sequences[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
 
-        ppb = PPBuilder()
-        for chn in self.st.get_chains():
-            ch_id = chn.id
-            for frag in ppb.build_peptides(chn):
-                start = frag[0].get_id()[1]
-                end = frag[-1].get_id()[1]
-                frid = '{}:{}-{}'.format(ch_id, start, end)
-                sqr = SeqRecord(
-                    frag.get_sequence(),
-                    'pdbsq_' + frid,
-                    'pdbsq_' + frid,
-                    'PDB sequence chain ' + frid
-                )
-                sqr.features.append(SeqFeature(FeatureLocation(start, end)))
-                self.sequences[ch_id]['pdb'].append(sqr)
+        # PDB extrated sequences
+        for mod in self.st:
+            ppb = PPBuilder()
+            for chn in mod.get_chains():
+                seqs = []
+                #self.sequences[ch_id]['pdb'][mod.id] = [1]                
+                ch_id = chn.id
+                for frag in ppb.build_peptides(chn):
+                    start = frag[0].get_id()[1]
+                    end = frag[-1].get_id()[1]
+                    frid = '{}:{}-{}'.format(ch_id, start, end)
+                    sqr = SeqRecord(
+                        frag.get_sequence(),
+                        'pdbsq_' + frid,
+                        'pdbsq_' + frid,
+                        'PDB sequence chain ' + frid
+                    )
+                    sqr.features.append(SeqFeature(FeatureLocation(start, end)))
+                    seqs.append(sqr)
+                self.sequences[ch_id]['pdb'][mod.id] = seqs
         return 0
 
     def update_internals(self):
@@ -752,12 +757,13 @@ class StructureManager():
             for res in self.hetatm[mu.ORGANIC]:
                 print(mu.residue_id(res))
 
-    def save_structure(self, output_pdb_path):
+    def save_structure(self, output_pdb_path, mod_id=None):
         """
         Saves structure on disk in PDB format
 
         Args:
             output_pdb_path: OS path to the output file
+            mod_id (optional): model to write
 
         Errors:
             OSError: Error saving the file
@@ -765,8 +771,14 @@ class StructureManager():
         if not output_pdb_path:
             raise OutputPathNotProvidedError
         pdbio = PDBIO()
-        pdbio.set_structure(self.st)
-        pdbio.save(output_pdb_path)
+        
+        if mod_id is None:
+            pdbio.set_structure(self.st)
+            pdbio.save(output_pdb_path)
+        else:
+            pdbio.set_structure(self.st[mod_id])
+            pdbio.save(output_pdb_path)
+
 
     def get_all_r2r_distances(self, res_group, join_models):
         """ Determine residue pairs within a given Cutoff distance
@@ -931,52 +943,58 @@ class StructureManager():
 
         mod_mgr = ModellerManager()
         mod_mgr.seqs = self.sequences
-        self.save_structure(mod_mgr.tmpdir + '/templ.pdb')
+        for mod in self.st:
+            if self.has_models():
+                print('Processing Model {}'.format(mod.id + 1))
+                self.save_structure('{}/templ.pdb'.format(mod_mgr.tmpdir), mod.id)
+            else:
+                self.save_structure('{}/templ.pdb'.format(mod_mgr.tmpdir))
+            for ch_id in self.chain_ids:
+                if ch_id not in ch_to_fix:
+                    continue
+                print("Fixing backbone of chain " + ch_id)
+                model_pdb = mod_mgr.build(mod.id, ch_id)
+                parser = PDBParser(PERMISSIVE=1)
+                model_st = parser.get_structure(
+                    'model_st',
+                    mod_mgr.tmpdir + "/" + model_pdb['name']
+                )
+                self.merge_structure(
+                    model_st,
+                    mod.id,
+                    ch_id,
+                    self.sequences[ch_id]['pdb'][mod.id][0].features[0].location.start
+                )
 
-        for ch_id in self.chain_ids:
-            if ch_id not in ch_to_fix:
-                continue
-            print("Fixing backbone of chain " + ch_id)
-            model_pdb = mod_mgr.build(ch_id)
-            parser = PDBParser(PERMISSIVE=1)
-            model_st = parser.get_structure(
-                'model_st',
-                mod_mgr.tmpdir + "/" + model_pdb['name']
-            )
-            self.merge_structure(
-                model_st,
-                ch_id,
-                self.sequences[ch_id]['pdb'][0].features[0].location.start
-            )
-
-            fixed.append((ch_id, self.sequences[ch_id]['pdb'][0].features[0].location))
+                fixed.append((ch_id, self.sequences[ch_id]['pdb'][mod.id][0].features[0].location))
 
         self.update_internals()
         return fixed
 
-    def merge_structure(self, new_st, ch_id, offset):
+
+    def merge_structure(self, new_st, mod_id, ch_id, offset):
         spimp = Superimposer()
-        fixed_ats = [atm for atm in self.st[0][ch_id].get_atoms() if atm.id == 'CA']
+        fixed_ats = [atm for atm in self.st[mod_id][ch_id].get_atoms() if atm.id == 'CA']
         moving_ats = []
         for atm in fixed_ats:
             moving_ats.append(new_st[0][' '][atm.get_parent().id[1] - offset + 1]['CA'])
         spimp.set_atoms(fixed_ats, moving_ats)
         spimp.apply(new_st.get_atoms())
 
-        list_res = self.st[0][ch_id].get_list()
+        list_res = self.st[mod_id][ch_id].get_list()
 
-        for i in range(0, len(self.sequences[ch_id]['pdb'])-1):
-            gap_start = self.sequences[ch_id]['pdb'][i].features[0].location.end
-            gap_end = self.sequences[ch_id]['pdb'][i+1].features[0].location.start
+        for i in range(0, len(self.sequences[ch_id]['pdb'][mod_id])-1):
+            gap_start = self.sequences[ch_id]['pdb'][mod_id][i].features[0].location.end
+            gap_end = self.sequences[ch_id]['pdb'][mod_id][i+1].features[0].location.start
             pos = 0
-            while pos < len(list_res) and self.st[0][ch_id].child_list[pos].id[1] != gap_start:
+            while pos < len(list_res) and self.st[mod_id][ch_id].child_list[pos].id[1] != gap_start:
                 pos += 1
-            self.remove_residue(self.st[0][ch_id][gap_start], update_int=False)
-            self.remove_residue(self.st[0][ch_id][gap_end], update_int=False)
+            self.remove_residue(self.st[mod_id][ch_id][gap_start], update_int=False)
+            self.remove_residue(self.st[mod_id][ch_id][gap_end], update_int=False)
             for nres in range(gap_start, gap_end + 1):
                 res = new_st[0][' '][nres - offset + 1].copy()
                 res.id = (' ', nres, ' ')
-                self.st[0][ch_id].insert(pos, res)
+                self.st[mod_id][ch_id].insert(pos, res)
                 pos += 1
                 print("Adding " + mu.residue_id(res))
             print()
