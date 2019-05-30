@@ -22,6 +22,7 @@ class ModellerManager():
         #self.tmpdir = "/tmp/modtest"
         self.ch_id = ''
         self.seqs = ''
+        self.templ_file = 'templ.pdb'
         try:
             os.mkdir(self.tmpdir)
         except IOError as err:
@@ -32,17 +33,17 @@ class ModellerManager():
 
     def build(self, target_model, target_chain):
         """ Prepares Modeller input and builds the model """
+        alin_file = self.tmpdir + "/alin.pir"
         tgt_seq = self.seqs[target_chain]['can'].seq
         templs = []
         knowns = []
-        # Check N-term
         for ch_id in self.seqs[target_chain]['chains']:
             pdb_seq = self.seqs[ch_id]['pdb'][target_model][0].seq
-
+            # Check N-term
             if ch_id == target_chain:
                 nt_pos = tgt_seq.find(pdb_seq)
                 tgt_seq = tgt_seq[nt_pos:]
-
+            # Make alignment gaps from breaks
             for i in range(1, len(self.seqs[ch_id]['pdb'][target_model])):
                 gap_len = self.seqs[ch_id]['pdb'][target_model][i].features[0].location.start\
                     - self.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
@@ -54,7 +55,8 @@ class ModellerManager():
                     pdb_seq,
                     'templ' + ch_id,
                     '',
-                    'structureX:templ.pdb:{}:{}:{}:{}:::-1.00: -1.00'.format(
+                    'structureX:{}:{}:{}:{}:{}:::-1.00: -1.00'.format(
+                        self.templ_file,
                         self.seqs[ch_id]['pdb'][target_model][0].features[0].location.start,
                         ch_id,
                         self.seqs[ch_id]['pdb'][target_model][-1].features[0].location.end,
@@ -65,6 +67,12 @@ class ModellerManager():
             knowns.append('templ' + ch_id)
             if ch_id == target_chain:
                 tgt_seq = tgt_seq[0:len(pdb_seq)]
+
+        self._write_alin(tgt_seq, templs, alin_file)
+
+        return self._automodel_run(alin_file, knowns)
+
+    def _write_alin(self, tgt_seq, templs, alin_file):
         SeqIO.write(
             [
                 SeqRecord(
@@ -73,11 +81,15 @@ class ModellerManager():
                     '',
                     'sequence:target:::::::0.00: 0.00'
                 )
-            ] + templs, self.tmpdir + "/alin.pir", 'pir')
+            ] + templs,
+            alin_file,
+            'pir'
+        )
 
+    def _automodel_run(self, alin_file, knowns):
         amdl = automodel(
             self.env,
-            alnfile=self.tmpdir + "/alin.pir",
+            alnfile=alin_file,
             knowns=knowns,
             sequence='target',
             assess_methods=(assess.DOPE, assess.GA341)
@@ -91,6 +103,7 @@ class ModellerManager():
         os.chdir(orig_dir)
 
         return amdl.outputs[0]
+
 
     def __del__(self):
         shutil.rmtree(self.tmpdir)
