@@ -658,6 +658,19 @@ class StructureManager():
             'ca_only': self.ca_only,
             'biounit': self.biounit
         }
+        
+    def get_term_res(self):
+        term_res = []
+        for res in self.all_residues:
+            if mu.is_hetatm(res):
+                continue
+            if self.is_N_term(res):
+                term_res.append(('N',res))
+            if self.is_C_term(res):
+                term_res.append(('C',res))
+        return term_res               
+            
+        
     def print_headers(self):
         """
         Prints selected components from structure headers
@@ -1010,7 +1023,51 @@ class StructureManager():
             )
             print()
         return fixed_gaps
+    
+    def add_main_chain_caps(self, caps_list):
+        print(caps_list)
+        for cap in caps_list:
+            if cap[0] == 'N':
+                self._add_N_cap_at_res(cap[1])
+            else:
+                self._add_C_cap_at_res(cap[1])
+        sys.exit()
 
+    def _add_N_cap_at_res(self, res):
+        if 'N' in res:
+            #ADD ACE residue
+            print(mu.residue_id(res), "Adding extra ACE residue")
+            #TODO
+        elif 'CA' in res:
+            #Modify residue to ACE
+            for atm in res.get_atoms():
+                if atm.id not in ('C', 'O', 'CA'):
+                    print(mu.residue_id(res))
+                    mu.remove_atom_from_res(res, atm.id)
+                    print("Removing" + atm.id)
+        else:
+            # Mutate to ACE
+            print(mu.residue_id(res), "No CA, Replacing by ACE residue")
+            #TODO
+        
+    def _add_C_cap_at_res(self, res):
+        if 'C' in res:
+            #ADD NME residue
+            print(mu.residue_id(res), "Adding extra NME residue")
+            #TODO
+            
+        elif 'CA' in res:
+            #Modify residue to NME
+            for atm in res.get_atoms():
+                if atm.id not in ('N', 'CA'):
+                    print(mu.residue_id(res))
+                    mu.remove_atom_from_res(res, atm.id)
+                    print("Removing" + atm.id)
+        else:
+            # Mutate to ACE
+            print(mu.residue_id(res), "No CA, Replacing by NME residue")
+            #TODO
+        
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
