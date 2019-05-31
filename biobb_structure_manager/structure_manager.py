@@ -966,6 +966,7 @@ class StructureManager():
                     model_st,
                     mod.id,
                     ch_id,
+                    brk_list,
                     self.sequences[ch_id]['pdb'][mod.id][0].features[0].location.start
                 )
                 fixed_segments += fixed_gaps
@@ -973,9 +974,9 @@ class StructureManager():
         self.update_internals()
 
         return fixed_segments
-
-
-    def merge_structure(self, new_st, mod_id, ch_id, offset):
+    
+    
+    def merge_structure(self, new_st, mod_id, ch_id, brk_list, offset):
         spimp = Superimposer()
         fixed_ats = [atm for atm in self.st[mod_id][ch_id].get_atoms() if atm.id == 'CA']
         moving_ats = []
@@ -989,6 +990,10 @@ class StructureManager():
         for i in range(0, len(self.sequences[ch_id]['pdb'][mod_id])-1):
             gap_start = self.sequences[ch_id]['pdb'][mod_id][i].features[0].location.end
             gap_end = self.sequences[ch_id]['pdb'][mod_id][i+1].features[0].location.start
+
+            if [self.st[mod_id][ch_id][gap_start], self.st[mod_id][ch_id][gap_end]] not in brk_list:
+                continue
+            
             pos = 0
             while pos < len(list_res) and self.st[mod_id][ch_id].child_list[pos].id[1] != gap_start:
                 pos += 1
