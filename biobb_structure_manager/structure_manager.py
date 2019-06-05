@@ -114,6 +114,7 @@ class StructureManager():
         self.prev_residue = {}
 
         self.sequences = {}
+        self.canonical_sequence = False
 
         self.modified = False
         self.biounit = False
@@ -126,12 +127,11 @@ class StructureManager():
         self.input_format = self._load_structure_file(
             input_pdb_path, cache_dir, pdb_server, file_format
         )
+        
         self.fasta = []
-
         if fasta_sequence_path:
-            for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
-                self.fasta.append(record)
-
+            self.load_sequence_from_fasta(fasta_sequence_path)
+        
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
         self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
@@ -184,10 +184,26 @@ class StructureManager():
 
         return input_format
 
-    def _get_sequences(self):
+    def load_sequence_from_fasta(self, fasta_sequence_path=None):
+        self.fasta = []
+        try:
+            for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
+                self.fasta.append(record)
+        except IOError:
+            sys.exit("Error loading FASTA")
+                
+    def _get_sequences(self, clean=True):
         """ Extract sequences from structure, requires mmCIF or external fasta, only protein"""
-        self.sequences = {}
-
+        if clean:
+            self.sequences = {}
+            self.canonical_sequence = False
+        
+        if not self.canonical_sequence:
+            self.get_canonical_seqs()
+            
+        self.get_structure_seqs()
+        
+    def get_canonical_seqs(self):
         if self.fasta:
             chids = []
             seqs = []
@@ -210,20 +226,24 @@ class StructureManager():
 
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
-                self.sequences[ch_id] = {
-                    'can' : SeqRecord(
-                        Seq(seqs[i].replace('\n', ''), IUPAC.protein),
-                        'csq_' + ch_id,
-                        'csq_' + ch_id,
-                        'canonical sequence chain ' + ch_id
-                    ),
-                    'chains': chids[i].split(','),
-                    'pdb': {}
-                }
+                if ch_id not in self.sequences:
+                    self.sequences[ch_id] = {'can':None , 'chains': None, 'pdb':{}}
+                self.sequences[ch_id]['can'] = SeqRecord(
+                    Seq(seqs[i].replace('\n', ''), IUPAC.protein),
+                    'csq_' + ch_id,
+                    'csq_' + ch_id,
+                    'canonical sequence chain ' + ch_id
+                )
                 self.sequences[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
+                
+                self.sequences[ch_id]['chains'] = chids[i].split(',')
 
+        self.canonical_sequence = True
+        return 0
+    
+    def get_structure_seqs(self):
         # PDB extrated sequences
         for mod in self.st:
             ppb = PPBuilder()
@@ -243,15 +263,16 @@ class StructureManager():
                     )
                     sqr.features.append(SeqFeature(FeatureLocation(start, end)))
                     seqs.append(sqr)
+                if ch_id not in self.sequences:
+                    self.sequences[ch_id] = {'can':None, 'chains':None, 'pdb':{}}
                 self.sequences[ch_id]['pdb'][mod.id] = seqs
-        return 0
 
     def update_internals(self):
         """ Update internal data when structure is modified """
 
         # get canonical and structure sequences
-        self._get_sequences()
-
+        self._get_sequences(clean=False)
+        
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
         #Atom renumbering for mmCIF, PDB uses atom number in file
