@@ -184,7 +184,7 @@ class StructureManager():
 
         return input_format
 
-    def load_sequence_from_fasta(self, fasta_sequence_path=None):
+    def load_sequence_from_fasta(self, fasta_sequence_path):
         self.fasta = []
         try:
             for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
@@ -226,8 +226,10 @@ class StructureManager():
 
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
+                if ch_id not in self.chain_ids:
+                    continue
                 if ch_id not in self.sequences:
-                    self.sequences[ch_id] = {'can':None , 'chains': None, 'pdb':{}}
+                    self.sequences[ch_id] = {'can':None , 'chains': [], 'pdb':{}}
                 self.sequences[ch_id]['can'] = SeqRecord(
                     Seq(seqs[i].replace('\n', ''), IUPAC.protein),
                     'csq_' + ch_id,
@@ -237,8 +239,10 @@ class StructureManager():
                 self.sequences[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
-                
-                self.sequences[ch_id]['chains'] = chids[i].split(',')
+
+                for chn in chids[i].split(','):
+                    if chn in self.chain_ids:
+                        self.sequences[ch_id]['chains'].append(chn)
 
         self.canonical_sequence = True
         return 0
@@ -270,8 +274,6 @@ class StructureManager():
     def update_internals(self):
         """ Update internal data when structure is modified """
 
-        # get canonical and structure sequences
-        self._get_sequences(clean=False)
         
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
@@ -292,6 +294,8 @@ class StructureManager():
             ('N', 'C'),
             self.data_library.distances['COVLNK']
         )
+        # get canonical and structure sequences
+        self._get_sequences(clean=True)
 
     def residue_renumbering(self):
         """Sets the Bio.PDB.Residue.index attribute to residues for a unique,
@@ -980,6 +984,7 @@ class StructureManager():
         mod_mgr.seqs = self.sequences
 
         fixed_segments = []
+
         for mod in self.st:
             if self.has_models():
                 print('Processing Model {}'.format(mod.id + 1))
