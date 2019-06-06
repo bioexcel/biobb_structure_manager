@@ -140,6 +140,7 @@ class StructureManager():
         self.update_internals()
 
     def _load_structure_file(self, input_pdb_path, cache_dir, pdb_server, file_format):
+        """ Load structure file """
         if "pdb:"in input_pdb_path:
             # MMBPDBList child defaults to Bio.PDB.PDBList if MMB server is not selected
             pdbl = MMBPDBList(pdb=cache_dir, server=pdb_server)
@@ -185,15 +186,17 @@ class StructureManager():
         return input_format
 
     def load_sequence_from_fasta(self, fasta_sequence_path):
+        """ Loads canonical sequence from external FASTA file"""
         self.fasta = []
-        try:
-            for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
-                self.fasta.append(record)
-        except IOError:
-            sys.exit("Error loading FASTA")
+        if fasta_sequence_path:
+            try:
+                for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
+                    self.fasta.append(record)
+            except IOError:
+                sys.exit("Error loading FASTA")
                 
     def _get_sequences(self, clean=True):
-        """ Extract sequences from structure, requires mmCIF or external fasta, only protein"""
+        """ Extracts sequences"""
         if clean:
             self.sequences = {}
             self.canonical_sequence = False
@@ -204,6 +207,11 @@ class StructureManager():
         self.get_structure_seqs()
         
     def get_canonical_seqs(self):
+        """ Prepare canonical sequences """
+        
+        if not self.chain_ids:
+            self.set_chain_ids()
+            
         if self.fasta:
             chids = []
             seqs = []
@@ -248,6 +256,7 @@ class StructureManager():
         return 0
     
     def get_structure_seqs(self):
+        """ Extracts sequences from structure"""
         # PDB extrated sequences
         for mod in self.st:
             ppb = PPBuilder()
@@ -268,7 +277,7 @@ class StructureManager():
                     sqr.features.append(SeqFeature(FeatureLocation(start, end)))
                     seqs.append(sqr)
                 if ch_id not in self.sequences:
-                    self.sequences[ch_id] = {'can':None, 'chains':None, 'pdb':{}}
+                    self.sequences[ch_id] = {'can':None, 'chains':[], 'pdb':{}}
                 self.sequences[ch_id]['pdb'][mod.id] = seqs
 
     def update_internals(self):
