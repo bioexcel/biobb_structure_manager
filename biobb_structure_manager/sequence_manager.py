@@ -2,10 +2,15 @@
 """ Module to manage sequence information for structures """
 
 
+import sys
+from Bio.Seq import Seq, IUPAC
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+
 class SequenceData():
     def __init__(self):
         self.seqs = {}
-        self.canonical = False
+        self.has_canonical = False
         self.fasta = []
         
         
@@ -23,22 +28,22 @@ class SequenceData():
             except IOError:
                 sys.exit("Error loading FASTA")
 
-    def read_sequences(self, st, clean=True):
+    def read_sequences(self, strucm, clean=True):
         """ Extracts sequences"""
         if clean:
             self.seqs = {}
-            self.canonical = False
+            self.has_canonical = False
         
-        if not self.canonical:
+        if not self.has_canonical:
             self.read_canonical_seqs()
             
         self.read_structure_seqs()
     
-    def read_canonical_seqs(self, st, ):
+    def read_canonical_seqs(self, strucm):
         """ Prepare canonical sequences """
         
-        if not self.chain_ids:
-            self.set_chain_ids()
+        if not strucm.chain_ids:
+            strucm.set_chain_ids()
             
         if self.fasta:
             chids = []
@@ -47,46 +52,46 @@ class SequenceData():
                 chids.append(rec.id.split('_')[1])
                 seqs.append(str(rec.seq))
         else:
-            if self.input_format != 'cif':
+            if strucm.input_format != 'cif':
                 print("Warning: sequence features only available in mmCIF" +\
                     " format or with external fasta input")
                 return 1
             #TODO check for NA
 
-            if not isinstance(self.headers['_entity_poly.pdbx_strand_id'], list):
-                chids = [self.headers['_entity_poly.pdbx_strand_id']]
-                seqs = [self.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
+            if not isinstance(strucm.headers['_entity_poly.pdbx_strand_id'], list):
+                chids = [strucm.headers['_entity_poly.pdbx_strand_id']]
+                seqs = [strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
             else:
-                chids = self.headers['_entity_poly.pdbx_strand_id']
-                seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
+                chids = strucm.headers['_entity_poly.pdbx_strand_id']
+                seqs = strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']
 
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
-                if ch_id not in self.chain_ids:
+                if ch_id not in strucm.chain_ids:
                     continue
-                if ch_id not in self.sequences:
-                    self.sequences[ch_id] = {'can':None , 'chains': [], 'pdb':{}}
-                self.sequences[ch_id]['can'] = SeqRecord(
+                if ch_id not in self.seqs:
+                    self.add_empty_chain(ch_id)
+                self.seqs[ch_id]['can'] = SeqRecord(
                     Seq(seqs[i].replace('\n', ''), IUPAC.protein),
                     'csq_' + ch_id,
                     'csq_' + ch_id,
                     'canonical sequence chain ' + ch_id
                 )
-                self.sequences[ch_id]['can'].features.append(
+                self.seqs[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
 
                 for chn in chids[i].split(','):
-                    if chn in self.chain_ids:
-                        self.sequences[ch_id]['chains'].append(chn)
+                    if chn in strucm.chain_ids:
+                        self.seqs[ch_id]['chains'].append(chn)
 
-        self.canonical_sequence = True
+        self.has_canonical = True
         return 0
     
-    def read_structure_seqs(self):
+    def read_structure_seqs(self, strucm):
         """ Extracts sequences from structure"""
         # PDB extrated sequences
-        for mod in self.st:
+        for mod in struct.st:
             ppb = PPBuilder()
             for chn in mod.get_chains():
                 seqs = []
@@ -104,33 +109,8 @@ class SequenceData():
                     )
                     sqr.features.append(SeqFeature(FeatureLocation(start, end)))
                     seqs.append(sqr)
-                if ch_id not in self.sequences:
-                    self.sequences[ch_id] = {'can':None, 'chains':[], 'pdb':{}}
-                self.sequences[ch_id]['pdb'][mod.id] = seqs
+                if ch_id not in self.seqs:
+                    self.add_empty_chain(ch_id)
+                self.seqs[ch_id]['pdb'][mod.id] = seqs
 
-    def update_internals(self):
-        """ Update internal data when structure is modified """
-
-        
-        # Add .index field for correlative, unique numbering of residues
-        self.residue_renumbering()
-        #Atom renumbering for mmCIF, PDB uses atom number in file
-        self.atom_renumbering()
-        self.set_chain_ids()
-        self.calc_stats()
-        self.guess_hetatm()
-        #Pre_calc rr distances with separated models
-        self.rr_dist = mu.get_all_r2r_distances(
-            self.st,
-            'all',
-            self.data_library.distances['R_R_CUTOFF'],
-            join_models=False
-        )
-        #Precalc backbone . TODO Nucleic Acids
-        self.check_backbone_connect(
-            ('N', 'C'),
-            self.data_library.distances['COVLNK']
-        )
-        # get canonical and structure sequences
-        self._get_sequences(clean=True)
-
+    
