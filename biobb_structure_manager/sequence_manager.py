@@ -3,6 +3,8 @@
 
 
 import sys
+from Bio.PDB.Polypeptide import PPBuilder
+
 from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
@@ -35,9 +37,9 @@ class SequenceData():
             self.has_canonical = False
         
         if not self.has_canonical:
-            self.read_canonical_seqs()
+            self.read_canonical_seqs(strucm)
             
-        self.read_structure_seqs()
+        self.read_structure_seqs(strucm)
     
     def read_canonical_seqs(self, strucm):
         """ Prepare canonical sequences """
@@ -91,7 +93,7 @@ class SequenceData():
     def read_structure_seqs(self, strucm):
         """ Extracts sequences from structure"""
         # PDB extrated sequences
-        for mod in struct.st:
+        for mod in strucm.st:
             ppb = PPBuilder()
             for chn in mod.get_chains():
                 seqs = []

@@ -34,21 +34,21 @@ class ModellerManager():
     def build(self, target_model, target_chain):
         """ Prepares Modeller input and builds the model """
         alin_file = self.tmpdir + "/alin.pir"
-        tgt_seq = self.seqs[target_chain]['can'].seq
+        tgt_seq = self.seqs.seqs[target_chain]['can'].seq
         templs = []
         knowns = []
-        for ch_id in self.seqs[target_chain]['chains']:
-            pdb_seq = self.seqs[ch_id]['pdb'][target_model][0].seq
+        for ch_id in self.seqs.seqs[target_chain]['chains']:
+            pdb_seq = self.seqs.seqs[ch_id]['pdb'][target_model][0].seq
             # Check N-term
             if ch_id == target_chain:
                 nt_pos = tgt_seq.find(pdb_seq)
                 tgt_seq = tgt_seq[nt_pos:]
             # Make alignment gaps from breaks
-            for i in range(1, len(self.seqs[ch_id]['pdb'][target_model])):
-                gap_len = self.seqs[ch_id]['pdb'][target_model][i].features[0].location.start\
-                    - self.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
+            for i in range(1, len(self.seqs.seqs[ch_id]['pdb'][target_model])):
+                gap_len = self.seqs.seqs[ch_id]['pdb'][target_model][i].features[0].location.start\
+                    - self.seqs.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
                 pdb_seq += '-'*gap_len
-                pdb_seq += self.seqs[ch_id]['pdb'][target_model][i].seq
+                pdb_seq += self.seqs.seqs[ch_id]['pdb'][target_model][i].seq
 
             templs.append(
                 SeqRecord(
@@ -57,9 +57,9 @@ class ModellerManager():
                     '',
                     'structureX:{}:{}:{}:{}:{}:::-1.00: -1.00'.format(
                         self.templ_file,
-                        self.seqs[ch_id]['pdb'][target_model][0].features[0].location.start,
+                        self.seqs.seqs[ch_id]['pdb'][target_model][0].features[0].location.start,
                         ch_id,
-                        self.seqs[ch_id]['pdb'][target_model][-1].features[0].location.end,
+                        self.seqs.seqs[ch_id]['pdb'][target_model][-1].features[0].location.end,
                         ch_id
                     )
                 )
