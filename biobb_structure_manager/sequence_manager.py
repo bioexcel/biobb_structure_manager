@@ -8,6 +8,7 @@ from Bio.PDB.Polypeptide import PPBuilder
 from Bio.Seq import Seq, IUPAC
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+from biobb_structure_manager.model_utils import PROTEIN
 
 class SequenceData():
     def __init__(self):
@@ -59,17 +60,21 @@ class SequenceData():
                     " format or with external fasta input")
                 return 1
             #TODO check for NA
-
-            if not isinstance(strucm.headers['_entity_poly.pdbx_strand_id'], list):
-                chids = [strucm.headers['_entity_poly.pdbx_strand_id']]
-                seqs = [strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
+            if '_entity_poly.pdbx_strand_id' in strucm.headers:
+                if not isinstance(strucm.headers['_entity_poly.pdbx_strand_id'], list):
+                    chids = [strucm.headers['_entity_poly.pdbx_strand_id']]
+                    seqs = [strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
+                else:
+                    chids = strucm.headers['_entity_poly.pdbx_strand_id']
+                    seqs = strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']
             else:
-                chids = strucm.headers['_entity_poly.pdbx_strand_id']
-                seqs = strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']
-
+                print("Warning: sequence data unavailable on cif data")
+                return 1
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
                 if ch_id not in strucm.chain_ids:
+                    continue
+                if strucm.chain_ids[ch_id] != PROTEIN:
                     continue
                 if ch_id not in self.seqs:
                     self.add_empty_chain(ch_id)
@@ -102,6 +107,8 @@ class SequenceData():
                 for frag in ppb.build_peptides(chn):
                     start = frag[0].get_id()[1]
                     end = frag[-1].get_id()[1]
+                    idx_start = frag[0].index
+                    idx_end = frag[-1].index
                     frid = '{}:{}-{}'.format(ch_id, start, end)
                     sqr = SeqRecord(
                         frag.get_sequence(),
@@ -109,10 +116,8 @@ class SequenceData():
                         'pdbsq_' + frid,
                         'PDB sequence chain ' + frid
                     )
-                    sqr.features.append(SeqFeature(FeatureLocation(start, end)))
+                    sqr.features.append(SeqFeature(FeatureLocation(idx_start, idx_end)))
                     seqs.append(sqr)
                 if ch_id not in self.seqs:
                     self.add_empty_chain(ch_id)
                 self.seqs[ch_id]['pdb'][mod.id] = seqs
-
-    
