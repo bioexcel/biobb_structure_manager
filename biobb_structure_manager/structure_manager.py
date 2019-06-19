@@ -173,7 +173,7 @@ class StructureManager():
         try:
             self.st = parser.get_structure('st', real_pdb_path)
         except ValueError as err:
-            raise ParseError('ValueError', err)
+            raise ParseError('ValueError', str(err))
 
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
