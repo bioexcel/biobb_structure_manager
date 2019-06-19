@@ -10,6 +10,7 @@ from Bio.PDB.PDBIO import PDBIO, Select
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Superimposer import Superimposer
+from Bio.PDB.PDBExceptions import PDBConstructionException
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager
@@ -174,7 +175,9 @@ class StructureManager():
             self.st = parser.get_structure('st', real_pdb_path)
         except ValueError as err:
             raise ParseError('ValueError', err)
-
+        except PDBConstructionException as err:
+            raise ParseError('PDBBuildError',err)
+        
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
         else:
