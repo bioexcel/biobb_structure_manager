@@ -49,7 +49,6 @@ class ModellerManager():
                     - self.seqs.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
                 pdb_seq += '-'*gap_len
                 pdb_seq += self.seqs.seqs[ch_id]['pdb'][target_model][i].seq
-
             templs.append(
                 SeqRecord(
                     pdb_seq,

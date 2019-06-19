@@ -104,6 +104,7 @@ class SequenceData():
                 seqs = []
                 #self.sequences[ch_id]['pdb'][mod.id] = [1]
                 ch_id = chn.id
+                wrong_order = False
                 for frag in ppb.build_peptides(chn):
                     start = frag[0].get_id()[1]
                     end = frag[-1].get_id()[1]
@@ -116,8 +117,15 @@ class SequenceData():
                         'pdbsq_' + frid,
                         'PDB sequence chain ' + frid
                     )
-                    sqr.features.append(SeqFeature(FeatureLocation(idx_start, idx_end)))
+                    if start < end:
+                        sqr.features.append(SeqFeature(FeatureLocation(start, end)))
+                    else:
+                        print("Warning: unusual residue numbering when detecting fragments at chain ", ch_id)
+                        print("Warning: chain reconstruction may be inaccurate")
+                        sqr.features.append(SeqFeature(FeatureLocation(end, start)))
+                        wrong_order = True
                     seqs.append(sqr)
                 if ch_id not in self.seqs:
                     self.add_empty_chain(ch_id)
                 self.seqs[ch_id]['pdb'][mod.id] = seqs
+                self.seqs[ch_id]['pdb']['wrong_order'] = wrong_order

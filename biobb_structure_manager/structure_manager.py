@@ -9,12 +9,7 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBIO import PDBIO, Select
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
-#from Bio.PDB.Polypeptide import PPBuilder
 from Bio.PDB.Superimposer import Superimposer
-#from Bio.Seq import Seq, IUPAC
-#from Bio import SeqIO
-#from Bio.SeqRecord import SeqRecord
-#from Bio.SeqFeature import SeqFeature, FeatureLocation
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager
@@ -175,7 +170,10 @@ class StructureManager():
 
         warnings.simplefilter('ignore', BiopythonWarning)
 
-        self.st = parser.get_structure('st', real_pdb_path)
+        try:
+            self.st = parser.get_structure('st', real_pdb_path)
+        except ValueError as err:
+            raise ParseError('ValueError', err)
 
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
@@ -1000,6 +998,8 @@ class StructureManager():
             for ch_id in self.chain_ids:
                 if ch_id not in ch_to_fix:
                     continue
+                if self.sequences.seqs[ch_id]['pdb']['wrong_order']:
+                    print ("Warning: chain {} has a unusual residue numbering, skipping".format(ch_id))
                 print("Fixing backbone of chain " + ch_id)
                 model_pdb = mod_mgr.build(mod.id, ch_id)
                 parser = PDBParser(PERMISSIVE=1)
@@ -1258,3 +1258,7 @@ class NotAValidResidueError(Error):
 class NotEnoughAtomsError(Error):
     def __init__(self):
         self.message = 'Warning: not enough backbone to build missing atoms'
+
+class ParseError(Error):
+    def __init__(self, err_id, err_txt):
+        self.message = '{} ({}) found when parsing input structure'.format(err_id, err_txt)
