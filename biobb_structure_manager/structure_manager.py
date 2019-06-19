@@ -177,7 +177,6 @@ class StructureManager():
             raise ParseError('ValueError', err)
         except PDBConstructionException as err:
             raise ParseError('PDBBuildError',err)
-        
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
         else:
