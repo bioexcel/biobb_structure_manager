@@ -6,6 +6,7 @@ import sys
 from Bio.PDB.Polypeptide import PPBuilder
 
 from Bio.Seq import Seq, IUPAC
+from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from biobb_structure_manager.model_utils import PROTEIN
@@ -15,11 +16,9 @@ class SequenceData():
         self.seqs = {}
         self.has_canonical = False
         self.fasta = []
-        
-        
+
     def add_empty_chain(self, ch_id):
-        self.seqs[ch_id] = {'can':None , 'chains': [], 'pdb':{}}
-        
+        self.seqs[ch_id] = {'can':None, 'chains': [], 'pdb':{}}
 
     def load_sequence_from_fasta(self, fasta_sequence_path):
         """ Loads canonical sequence from external FASTA file"""
@@ -36,18 +35,18 @@ class SequenceData():
         if clean:
             self.seqs = {}
             self.has_canonical = False
-        
+
         if not self.has_canonical:
             self.read_canonical_seqs(strucm)
-            
+
         self.read_structure_seqs(strucm)
-    
+
     def read_canonical_seqs(self, strucm):
         """ Prepare canonical sequences """
-        
+
         if not strucm.chain_ids:
             strucm.set_chain_ids()
-            
+
         if self.fasta:
             chids = []
             seqs = []
@@ -94,7 +93,7 @@ class SequenceData():
 
         self.has_canonical = True
         return 0
-    
+
     def read_structure_seqs(self, strucm):
         """ Extracts sequences from structure"""
         # PDB extrated sequences
@@ -108,8 +107,8 @@ class SequenceData():
                 for frag in ppb.build_peptides(chn):
                     start = frag[0].get_id()[1]
                     end = frag[-1].get_id()[1]
-                    idx_start = frag[0].index
-                    idx_end = frag[-1].index
+#                    idx_start = frag[0].index
+#                    idx_end = frag[-1].index
                     frid = '{}:{}-{}'.format(ch_id, start, end)
                     sqr = SeqRecord(
                         frag.get_sequence(),
@@ -120,8 +119,8 @@ class SequenceData():
                     if start < end:
                         sqr.features.append(SeqFeature(FeatureLocation(start, end)))
                     else:
-                        print("Warning: unusual residue numbering when detecting fragments at chain ", ch_id)
-                        print("Warning: chain reconstruction may be inaccurate")
+                        print("Warning: unusual residue numbering at chain ", ch_id)
+                        print("Warning: chain reconstruction may not be available")
                         sqr.features.append(SeqFeature(FeatureLocation(end, start)))
                         wrong_order = True
                     seqs.append(sqr)

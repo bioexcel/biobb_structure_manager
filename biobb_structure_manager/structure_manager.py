@@ -122,11 +122,11 @@ class StructureManager():
         self.input_format = self._load_structure_file(
             input_pdb_path, cache_dir, pdb_server, file_format
         )
-        
+
 #        self.fasta = []
         if fasta_sequence_path:
             self.sequences.load_sequence_from_fasta(fasta_sequence_path)
-        
+
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
         self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
@@ -176,7 +176,7 @@ class StructureManager():
         except ValueError as err:
             raise ParseError('ValueError', err)
         except PDBConstructionException as err:
-            raise ParseError('PDBBuildError',err)
+            raise ParseError('PDBBuildError', err)
         if input_format == 'pdb':
             self.headers = parse_pdb_header(real_pdb_path)
         else:
@@ -193,24 +193,24 @@ class StructureManager():
 #                    self.fasta.append(record)
 #            except IOError:
 #                sys.exit("Error loading FASTA")
-#                
+#
 #    def _get_sequences(self, clean=True):
 #        """ Extracts sequences"""
 #        if clean:
 #            self.sequences = {}
 #            self.canonical_sequence = False
-#        
+#
 #        if not self.canonical_sequence:
 #            self.get_canonical_seqs()
-#            
+#
 #        self.get_structure_seqs()
-#        
+#
 #    def get_canonical_seqs(self):
 #        """ Prepare canonical sequences """
-#        
+#
 #        if not self.chain_ids:
 #            self.set_chain_ids()
-#            
+#
 #        if self.fasta:
 #            chids = []
 #            seqs = []
@@ -253,7 +253,7 @@ class StructureManager():
 #
 #        self.canonical_sequence = True
 #        return 0
-#    
+#
 #    def get_structure_seqs(self):
 #        """ Extracts sequences from structure"""
 #        # PDB extrated sequences
@@ -689,19 +689,19 @@ class StructureManager():
             'ca_only': self.ca_only,
             'biounit': self.biounit
         }
-        
+
     def get_term_res(self):
         term_res = []
         for res in self.all_residues:
             if mu.is_hetatm(res):
                 continue
             if self.is_N_term(res):
-                term_res.append(('N',res))
+                term_res.append(('N', res))
             if self.is_C_term(res):
-                term_res.append(('C',res))
-        return term_res               
-            
-        
+                term_res.append(('C', res))
+        return term_res
+
+
     def print_headers(self):
         """
         Prints selected components from structure headers
@@ -979,7 +979,7 @@ class StructureManager():
     def fix_backbone_chain(self, brk_list, key_modeller=''):
         """ Fixes backbone breaks using Modeller """
         if key_modeller:
-            os.environ['KEY_MODELLER9v21']=key_modeller
+            os.environ['KEY_MODELLER9v21'] = key_modeller
         from biobb_structure_manager.modeller_manager import ModellerManager
 
         ch_to_fix = set()
@@ -1001,7 +1001,7 @@ class StructureManager():
                 if ch_id not in ch_to_fix:
                     continue
                 if self.sequences.seqs[ch_id]['pdb']['wrong_order']:
-                    print ("Warning: chain {} has a unusual residue numbering, skipping".format(ch_id))
+                    print("Warning: chain {} has a unusual residue numbering, skipping".format(ch_id))
                 print("Fixing backbone of chain " + ch_id)
                 model_pdb = mod_mgr.build(mod.id, ch_id)
                 parser = PDBParser(PERMISSIVE=1)
@@ -1021,8 +1021,8 @@ class StructureManager():
         self.update_internals()
 
         return fixed_segments
-    
-    
+
+
     def merge_structure(self, new_st, mod_id, ch_id, brk_list, offset):
         spimp = Superimposer()
         fixed_ats = [atm for atm in self.st[mod_id][ch_id].get_atoms() if atm.id == 'CA']
@@ -1040,7 +1040,7 @@ class StructureManager():
 
             if [self.st[mod_id][ch_id][gap_start], self.st[mod_id][ch_id][gap_end]] not in brk_list:
                 continue
-            
+
             pos = 0
             while pos < len(list_res) and self.st[mod_id][ch_id].child_list[pos].id[1] != gap_start:
                 pos += 1
@@ -1057,7 +1057,7 @@ class StructureManager():
             )
             print()
         return fixed_gaps
-    
+
     def add_main_chain_caps(self, caps_list):
         print(caps_list)
         for cap in caps_list:
@@ -1083,13 +1083,13 @@ class StructureManager():
             # Mutate to ACE
             print(mu.residue_id(res), "No CA, Replacing by ACE residue")
             #TODO
-        
+
     def _add_C_cap_at_res(self, res):
         if 'C' in res:
             #ADD NME residue
             print(mu.residue_id(res), "Adding extra NME residue")
             #TODO
-            
+
         elif 'CA' in res:
             #Modify residue to NME
             for atm in res.get_atoms():
@@ -1101,7 +1101,7 @@ class StructureManager():
             # Mutate to ACE
             print(mu.residue_id(res), "No CA, Replacing by NME residue")
             #TODO
-        
+
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:

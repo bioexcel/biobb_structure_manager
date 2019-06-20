@@ -67,24 +67,11 @@ class ModellerManager():
             if ch_id == target_chain:
                 tgt_seq = tgt_seq[0:len(pdb_seq)]
 
-        self._write_alin(tgt_seq, templs, alin_file)
+        _write_alin(tgt_seq, templs, alin_file)
 
         return self._automodel_run(alin_file, knowns)
 
-    def _write_alin(self, tgt_seq, templs, alin_file):
-        SeqIO.write(
-            [
-                SeqRecord(
-                    tgt_seq,
-                    'target',
-                    '',
-                    'sequence:target:::::::0.00: 0.00'
-                )
-            ] + templs,
-            alin_file,
-            'pir'
-        )
-
+    
     def _automodel_run(self, alin_file, knowns):
         amdl = automodel(
             self.env,
@@ -106,3 +93,17 @@ class ModellerManager():
 
     def __del__(self):
         shutil.rmtree(self.tmpdir)
+
+def _write_alin(tgt_seq, templs, alin_file):
+        SeqIO.write(
+            [
+                SeqRecord(
+                    tgt_seq,
+                    'target',
+                    '',
+                    'sequence:target:::::::0.00: 0.00'
+                )
+            ] + templs,
+            alin_file,
+            'pir'
+        )
