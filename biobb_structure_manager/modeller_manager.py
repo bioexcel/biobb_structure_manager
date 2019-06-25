@@ -8,8 +8,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 try:
-    from modeller import *
-    from modeller.automodel import *
+    from modeller import environ, log, assess
+    from modeller.automodel import automodel
 except:
     sys.exit("Error importing modeller")
 
@@ -21,7 +21,7 @@ class ModellerManager():
         self.tmpdir = TMP_BASE_DIR + "/mod" + str(uuid.uuid4())
         #self.tmpdir = "/tmp/modtest"
         self.ch_id = ''
-        self.seqs = ''
+        self.sequences = None
         self.templ_file = 'templ.pdb'
         try:
             os.mkdir(self.tmpdir)
@@ -34,21 +34,21 @@ class ModellerManager():
     def build(self, target_model, target_chain):
         """ Prepares Modeller input and builds the model """
         alin_file = self.tmpdir + "/alin.pir"
-        tgt_seq = self.seqs.seqs[target_chain]['can'].seq
+        tgt_seq = self.sequences.data[target_chain]['can'].seq
         templs = []
         knowns = []
-        for ch_id in self.seqs.seqs[target_chain]['chains']:
-            pdb_seq = self.seqs.seqs[ch_id]['pdb'][target_model][0].seq
+        for ch_id in self.sequences.data[target_chain]['chains']:
+            pdb_seq = self.sequences.data[ch_id]['pdb'][target_model][0].seq
             # Check N-term
             if ch_id == target_chain:
                 nt_pos = tgt_seq.find(pdb_seq)
                 tgt_seq = tgt_seq[nt_pos:]
             # Make alignment gaps from breaks
-            for i in range(1, len(self.seqs.seqs[ch_id]['pdb'][target_model])):
-                gap_len = self.seqs.seqs[ch_id]['pdb'][target_model][i].features[0].location.start\
-                    - self.seqs.seqs[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
+            for i in range(1, len(self.sequences.data[ch_id]['pdb'][target_model])):
+                gap_len = self.sequences.data[ch_id]['pdb'][target_model][i].features[0].location.start\
+                    - self.sequences.data[ch_id]['pdb'][target_model][i-1].features[0].location.end - 1
                 pdb_seq += '-'*gap_len
-                pdb_seq += self.seqs.seqs[ch_id]['pdb'][target_model][i].seq
+                pdb_seq += self.sequences.data[ch_id]['pdb'][target_model][i].seq
             templs.append(
                 SeqRecord(
                     pdb_seq,
@@ -56,9 +56,9 @@ class ModellerManager():
                     '',
                     'structureX:{}:{}:{}:{}:{}:::-1.00: -1.00'.format(
                         self.templ_file,
-                        self.seqs.seqs[ch_id]['pdb'][target_model][0].features[0].location.start,
+                        self.sequences.data[ch_id]['pdb'][target_model][0].features[0].location.start,
                         ch_id,
-                        self.seqs.seqs[ch_id]['pdb'][target_model][-1].features[0].location.end,
+                        self.sequences.data[ch_id]['pdb'][target_model][-1].features[0].location.end,
                         ch_id
                     )
                 )
@@ -71,7 +71,7 @@ class ModellerManager():
 
         return self._automodel_run(alin_file, knowns)
 
-    
+
     def _automodel_run(self, alin_file, knowns):
         amdl = automodel(
             self.env,
@@ -90,20 +90,19 @@ class ModellerManager():
 
         return amdl.outputs[0]
 
-
     def __del__(self):
         shutil.rmtree(self.tmpdir)
 
 def _write_alin(tgt_seq, templs, alin_file):
-        SeqIO.write(
-            [
-                SeqRecord(
-                    tgt_seq,
-                    'target',
-                    '',
-                    'sequence:target:::::::0.00: 0.00'
-                )
-            ] + templs,
-            alin_file,
-            'pir'
-        )
+    SeqIO.write(
+        [
+            SeqRecord(
+                tgt_seq,
+                'target',
+                '',
+                'sequence:target:::::::0.00: 0.00'
+            )
+        ] + templs,
+        alin_file,
+        'pir'
+    )

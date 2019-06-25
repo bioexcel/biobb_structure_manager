@@ -13,12 +13,12 @@ from biobb_structure_manager.model_utils import PROTEIN
 
 class SequenceData():
     def __init__(self):
-        self.seqs = {}
+        self.data = {}
         self.has_canonical = False
         self.fasta = []
 
     def add_empty_chain(self, ch_id):
-        self.seqs[ch_id] = {'can':None, 'chains': [], 'pdb':{}}
+        self.data[ch_id] = {'can':None, 'chains': [], 'pdb':{}}
 
     def load_sequence_from_fasta(self, fasta_sequence_path):
         """ Loads canonical sequence from external FASTA file"""
@@ -33,7 +33,7 @@ class SequenceData():
     def read_sequences(self, strucm, clean=True):
         """ Extracts sequences"""
         if clean:
-            self.seqs = {}
+            self.data = {}
             self.has_canonical = False
 
         if not self.has_canonical:
@@ -75,21 +75,21 @@ class SequenceData():
                     continue
                 if strucm.chain_ids[ch_id] != PROTEIN:
                     continue
-                if ch_id not in self.seqs:
+                if ch_id not in self.data:
                     self.add_empty_chain(ch_id)
-                self.seqs[ch_id]['can'] = SeqRecord(
+                self.data[ch_id]['can'] = SeqRecord(
                     Seq(seqs[i].replace('\n', ''), IUPAC.protein),
                     'csq_' + ch_id,
                     'csq_' + ch_id,
                     'canonical sequence chain ' + ch_id
                 )
-                self.seqs[ch_id]['can'].features.append(
+                self.data[ch_id]['can'].features.append(
                     SeqFeature(FeatureLocation(1, len(seqs[i])))
                 )
 
                 for chn in chids[i].split(','):
                     if chn in strucm.chain_ids:
-                        self.seqs[ch_id]['chains'].append(chn)
+                        self.data[ch_id]['chains'].append(chn)
 
         self.has_canonical = True
         return 0
@@ -107,8 +107,6 @@ class SequenceData():
                 for frag in ppb.build_peptides(chn):
                     start = frag[0].get_id()[1]
                     end = frag[-1].get_id()[1]
-#                    idx_start = frag[0].index
-#                    idx_end = frag[-1].index
                     frid = '{}:{}-{}'.format(ch_id, start, end)
                     sqr = SeqRecord(
                         frag.get_sequence(),
@@ -124,7 +122,7 @@ class SequenceData():
                         sqr.features.append(SeqFeature(FeatureLocation(end, start)))
                         wrong_order = True
                     seqs.append(sqr)
-                if ch_id not in self.seqs:
+                if ch_id not in self.data:
                     self.add_empty_chain(ch_id)
-                self.seqs[ch_id]['pdb'][mod.id] = seqs
-                self.seqs[ch_id]['pdb']['wrong_order'] = wrong_order
+                self.data[ch_id]['pdb'][mod.id] = seqs
+                self.data[ch_id]['pdb']['wrong_order'] = wrong_order

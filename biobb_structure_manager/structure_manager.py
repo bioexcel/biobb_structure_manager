@@ -6,7 +6,7 @@ import sys
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
-from Bio.PDB.PDBIO import PDBIO, Select
+from Bio.PDB.PDBIO import PDBIO
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Superimposer import Superimposer
@@ -109,7 +109,7 @@ class StructureManager():
         self.next_residue = {}
         self.prev_residue = {}
 
-        self.sequences = SequenceData()
+        self.sequence_data = SequenceData()
 
         self.modified = False
         self.biounit = False
@@ -125,7 +125,7 @@ class StructureManager():
 
 #        self.fasta = []
         if fasta_sequence_path:
-            self.sequences.load_sequence_from_fasta(fasta_sequence_path)
+            self.sequence_data.load_sequence_from_fasta(fasta_sequence_path)
 
         #checking models type according to RMS among models
         self.nmodels = len(self.st)
@@ -184,101 +184,6 @@ class StructureManager():
 
         return input_format
 
-#    def load_sequence_from_fasta(self, fasta_sequence_path):
-#        """ Loads canonical sequence from external FASTA file"""
-#        self.fasta = []
-#        if fasta_sequence_path:
-#            try:
-#                for record in SeqIO.parse(fasta_sequence_path, 'fasta'):
-#                    self.fasta.append(record)
-#            except IOError:
-#                sys.exit("Error loading FASTA")
-#
-#    def _get_sequences(self, clean=True):
-#        """ Extracts sequences"""
-#        if clean:
-#            self.sequences = {}
-#            self.canonical_sequence = False
-#
-#        if not self.canonical_sequence:
-#            self.get_canonical_seqs()
-#
-#        self.get_structure_seqs()
-#
-#    def get_canonical_seqs(self):
-#        """ Prepare canonical sequences """
-#
-#        if not self.chain_ids:
-#            self.set_chain_ids()
-#
-#        if self.fasta:
-#            chids = []
-#            seqs = []
-#            for rec in self.fasta:
-#                chids.append(rec.id.split('_')[1])
-#                seqs.append(str(rec.seq))
-#        else:
-#            if self.input_format != 'cif':
-#                print("Warning: sequence features only available in mmCIF" +\
-#                    " format or with external fasta input")
-#                return 1
-#            #TODO check for NA
-#
-#            if not isinstance(self.headers['_entity_poly.pdbx_strand_id'], list):
-#                chids = [self.headers['_entity_poly.pdbx_strand_id']]
-#                seqs = [self.headers['_entity_poly.pdbx_seq_one_letter_code_can']]
-#            else:
-#                chids = self.headers['_entity_poly.pdbx_strand_id']
-#                seqs = self.headers['_entity_poly.pdbx_seq_one_letter_code_can']
-#
-#        for i in range(0, len(chids)):
-#            for ch_id in chids[i].split(','):
-#                if ch_id not in self.chain_ids:
-#                    continue
-#                if ch_id not in self.sequences:
-#                    self.sequences[ch_id] = {'can':None , 'chains': [], 'pdb':{}}
-#                self.sequences[ch_id]['can'] = SeqRecord(
-#                    Seq(seqs[i].replace('\n', ''), IUPAC.protein),
-#                    'csq_' + ch_id,
-#                    'csq_' + ch_id,
-#                    'canonical sequence chain ' + ch_id
-#                )
-#                self.sequences[ch_id]['can'].features.append(
-#                    SeqFeature(FeatureLocation(1, len(seqs[i])))
-#                )
-#
-#                for chn in chids[i].split(','):
-#                    if chn in self.chain_ids:
-#                        self.sequences[ch_id]['chains'].append(chn)
-#
-#        self.canonical_sequence = True
-#        return 0
-#
-#    def get_structure_seqs(self):
-#        """ Extracts sequences from structure"""
-#        # PDB extrated sequences
-#        for mod in self.st:
-#            ppb = PPBuilder()
-#            for chn in mod.get_chains():
-#                seqs = []
-#                #self.sequences[ch_id]['pdb'][mod.id] = [1]
-#                ch_id = chn.id
-#                for frag in ppb.build_peptides(chn):
-#                    start = frag[0].get_id()[1]
-#                    end = frag[-1].get_id()[1]
-#                    frid = '{}:{}-{}'.format(ch_id, start, end)
-#                    sqr = SeqRecord(
-#                        frag.get_sequence(),
-#                        'pdbsq_' + frid,
-#                        'pdbsq_' + frid,
-#                        'PDB sequence chain ' + frid
-#                    )
-#                    sqr.features.append(SeqFeature(FeatureLocation(start, end)))
-#                    seqs.append(sqr)
-#                if ch_id not in self.sequences:
-#                    self.sequences[ch_id] = {'can':None, 'chains':[], 'pdb':{}}
-#                self.sequences[ch_id]['pdb'][mod.id] = seqs
-#
     def update_internals(self):
         """ Update internal data when structure is modified """
         # Add .index field for correlative, unique numbering of residues
@@ -301,7 +206,7 @@ class StructureManager():
             self.data_library.distances['COVLNK']
         )
         # get canonical and structure sequences
-        self.sequences.read_sequences(self, clean=True)
+        self.sequence_data.read_sequences(self, clean=True)
 
     def residue_renumbering(self):
         """Sets the Bio.PDB.Residue.index attribute to residues for a unique,
@@ -987,7 +892,7 @@ class StructureManager():
             ch_to_fix.add(brk[0].get_parent().id)
 
         mod_mgr = ModellerManager()
-        mod_mgr.seqs = self.sequences
+        mod_mgr.sequences = self.sequence_data
 
         fixed_segments = []
 
@@ -1000,7 +905,7 @@ class StructureManager():
             for ch_id in self.chain_ids:
                 if ch_id not in ch_to_fix:
                     continue
-                if self.sequences.seqs[ch_id]['pdb']['wrong_order']:
+                if self.sequence_data.data[ch_id]['pdb']['wrong_order']:
                     print("Warning: chain {} has a unusual residue numbering, skipping".format(ch_id))
                 print("Fixing backbone of chain " + ch_id)
                 model_pdb = mod_mgr.build(mod.id, ch_id)
@@ -1014,7 +919,7 @@ class StructureManager():
                     mod.id,
                     ch_id,
                     brk_list,
-                    self.sequences.seqs[ch_id]['pdb'][mod.id][0].features[0].location.start
+                    self.sequence_data.data[ch_id]['pdb'][mod.id][0].features[0].location.start
                 )
                 fixed_segments += fixed_gaps
 
@@ -1034,9 +939,9 @@ class StructureManager():
 
         list_res = self.st[mod_id][ch_id].get_list()
         fixed_gaps = []
-        for i in range(0, len(self.sequences.seqs[ch_id]['pdb'][mod_id])-1):
-            gap_start = self.sequences.seqs[ch_id]['pdb'][mod_id][i].features[0].location.end
-            gap_end = self.sequences.seqs[ch_id]['pdb'][mod_id][i+1].features[0].location.start
+        for i in range(0, len(self.sequence_data.data[ch_id]['pdb'][mod_id])-1):
+            gap_start = self.sequence_data.data[ch_id]['pdb'][mod_id][i].features[0].location.end
+            gap_end = self.sequence_data.data[ch_id]['pdb'][mod_id][i+1].features[0].location.start
 
             if [self.st[mod_id][ch_id][gap_start], self.st[mod_id][ch_id][gap_end]] not in brk_list:
                 continue
