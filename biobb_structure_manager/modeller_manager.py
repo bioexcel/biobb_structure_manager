@@ -8,8 +8,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 try:
-    from modeller import environ, log, assess
-    from modeller.automodel import automodel
+    from modeller import environ, log
+    from modeller.automodel import automodel, assess
 except:
     sys.exit("Error importing modeller")
 
