@@ -353,7 +353,8 @@ class StructureManager():
             self.rr_dist,
             self.data_library.distances['CLASH_DIST'],
             self.data_library.get_atom_lists(contact_types),
-            not self.has_superimp_models()
+            not self.has_superimp_models(),
+            severe='severe' in contact_types
         )
 
     def check_rr_clashes(self, res1, res2, contact_types):
@@ -362,7 +363,9 @@ class StructureManager():
             res1,
             res2,
             self.data_library.distances['CLASH_DIST'],
-            self.data_library.get_atom_lists(contact_types)
+            self.data_library.get_atom_lists(contact_types),
+            severe='severe' in contact_types
+            
         )
 
     def check_missing_atoms(self):
