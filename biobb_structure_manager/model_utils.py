@@ -294,18 +294,17 @@ def check_rr_clashes(res1, res2, clash_dist, atom_lists, join_models=True, sever
     clash_dist2 = {}
     ats_list1 = {}
     ats_list2 = {}
+    contact_types = set()
+    if severe:
+        contact_types.add('severe')
     for cls in atom_lists:
+        contact_types.add(cls)
+    for cls in contact_types:
         clash_list[cls] = []
         min_dist2[cls] = 99999.
         clash_dist2[cls] = clash_dist[cls]**2
         ats_list1[cls] = set()
         ats_list2[cls] = set()
-    if severe:
-        clash_list['severe'] = []
-        min_dist2['severe'] = 99999.
-        clash_dist2['severe'] = clash_dist['severe']**2
-        ats_list1['severe'] = set()
-        ats_list2['severe'] = set()
     for atm in res1.get_atoms():
         for cls in atom_lists:
             if is_at_in_list(atm, atom_lists[cls], res1.get_resname()):
@@ -319,33 +318,28 @@ def check_rr_clashes(res1, res2, clash_dist, atom_lists, join_models=True, sever
                 and (join_models or same_model(res1, res2)):
         for at_pair in get_all_rr_distances(res1, res2):
             at1, at2, dist2 = at_pair
-            if severe and dist2 < clash_dist2['severe']:
-                if dist2 < min_dist2['severe']:
-                    clash_list['severe'] = at_pair
-                    min_dist2['severe'] = dist2
-            else:
-                for cls in atom_lists:
-                    if cls == 'apolar':
-                        #Only one of the atoms should be apolar
-                        if not at1.id in ats_list1[cls] and \
-                                not at2.id in ats_list2[cls]:
-                            continue
-                        #Remove n->n+2 backbone clashes. TODO Improve
-                        if abs(res1.index - res2.index) <= 2:
-                            continue
-                        #Remove Ca2+ looking like backbone CA's
-                        if at1.id == 'CA' and is_hetatm(res1) or \
-                                at2.id == 'CA' and is_hetatm(res2):
-                            continue
-                    else:
-                        # Both atoms should be of the same kind
-                        if not at1.id in ats_list1[cls] or \
-                                not at2.id in ats_list2[cls]:
-                            continue
-                    if dist2 < clash_dist2[cls]:
-                        if dist2 < min_dist2[cls]:
-                            clash_list[cls] = at_pair
-                            min_dist2[cls] = dist2
+            for cls in contact_types:
+                if cls == 'apolar':
+                    #Only one of the atoms should be apolar
+                    if not at1.id in ats_list1[cls] and \
+                            not at2.id in ats_list2[cls]:
+                        continue
+                    #Remove n->n+2 backbone clashes. TODO Improve
+                    if abs(res1.index - res2.index) <= 2:
+                        continue
+                    #Remove Ca2+ looking like backbone CA's
+                    if at1.id == 'CA' and is_hetatm(res1) or \
+                            at2.id == 'CA' and is_hetatm(res2):
+                        continue
+                elif cls != 'severe':
+                    # Both atoms should be of the same kind
+                    if not at1.id in ats_list1[cls] or \
+                            not at2.id in ats_list2[cls]:
+                        continue
+                if dist2 < clash_dist2[cls]:
+                    if dist2 < min_dist2[cls]:
+                        clash_list[cls] = at_pair
+                        min_dist2[cls] = dist2
     return clash_list
 
 #===============================================================================
