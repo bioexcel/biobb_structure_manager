@@ -11,6 +11,7 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Superimposer import Superimposer
 from Bio.PDB.PDBExceptions import PDBConstructionException
+from Bio.PDB.Residue import Residue
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager
@@ -132,7 +133,7 @@ class StructureManager():
         self.models_type = mu.guess_models_type(self.st) if self.nmodels > 1 else 0
 
         # Calc internal data
-        self.update_internals()
+        self.update_internals(cif_warn=True)
 
     def _load_structure_file(self, input_pdb_path, cache_dir, pdb_server, file_format):
         """ Load structure file """
@@ -184,7 +185,7 @@ class StructureManager():
 
         return input_format
 
-    def update_internals(self):
+    def update_internals(self, cif_warn=False):
         """ Update internal data when structure is modified """
         # Add .index field for correlative, unique numbering of residues
         self.residue_renumbering()
@@ -206,7 +207,7 @@ class StructureManager():
             self.data_library.distances['COVLNK']
         )
         # get canonical and structure sequences
-        self.sequence_data.read_sequences(self, clean=True)
+        self.sequence_data.read_sequences(self, clean=True, cif_warn=cif_warn)
 
     def residue_renumbering(self):
         """Sets the Bio.PDB.Residue.index attribute to residues for a unique,
@@ -365,7 +366,7 @@ class StructureManager():
             self.data_library.distances['CLASH_DIST'],
             self.data_library.get_atom_lists(contact_types),
             severe='severe' in contact_types
-            
+
         )
 
     def check_missing_atoms(self):
@@ -967,48 +968,24 @@ class StructureManager():
         return fixed_gaps
 
     def add_main_chain_caps(self, caps_list):
-        print(caps_list)
+        #print(caps_list)
+        fixed = []
         for cap in caps_list:
             if cap[0] == 'N':
-                self._add_N_cap_at_res(cap[1])
+                if cap[1] in self.next_residue:
+                    mu.add_ACE_cap_at_res(cap[1], self.next_residue[cap[1]])
+                else:
+                    raise NotEnoughAtomsError
             else:
-                self._add_C_cap_at_res(cap[1])
-        sys.exit()
+                if cap[1] in self.prev_residue:
+                    mu.add_NME_cap_at_res(cap[1], self.prev_residue[cap[1]])
+                else:
+                    raise NotEnoughAtomsError
+            fixed.append(cap[1])
 
-    def _add_N_cap_at_res(self, res):
-        if 'N' in res:
-            #ADD ACE residue
-            print(mu.residue_id(res), "Adding extra ACE residue")
-            #TODO
-        elif 'CA' in res:
-            #Modify residue to ACE
-            for atm in res.get_atoms():
-                if atm.id not in ('C', 'O', 'CA'):
-                    print(mu.residue_id(res))
-                    mu.remove_atom_from_res(res, atm.id)
-                    print("Removing" + atm.id)
-        else:
-            # Mutate to ACE
-            print(mu.residue_id(res), "No CA, Replacing by ACE residue")
-            #TODO
+        self.update_internals()
+        return fixed
 
-    def _add_C_cap_at_res(self, res):
-        if 'C' in res:
-            #ADD NME residue
-            print(mu.residue_id(res), "Adding extra NME residue")
-            #TODO
-
-        elif 'CA' in res:
-            #Modify residue to NME
-            for atm in res.get_atoms():
-                if atm.id not in ('N', 'CA'):
-                    print(mu.residue_id(res))
-                    mu.remove_atom_from_res(res, atm.id)
-                    print("Removing" + atm.id)
-        else:
-            # Mutate to ACE
-            print(mu.residue_id(res), "No CA, Replacing by NME residue")
-            #TODO
 
     def fix_backbone_O_atoms(self, r_at):
         """Adding missing backbone atoms not affecting main-chain like O and OXT

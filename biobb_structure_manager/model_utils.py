@@ -9,6 +9,7 @@ from numpy import arccos, clip, cos, dot, pi, sin, sqrt
 from numpy.linalg import norm
 
 from Bio.PDB.Atom import Atom
+from Bio.PDB.Residue import Residue
 from Bio.PDB.NeighborSearch import NeighborSearch
 from Bio.PDB.vectors import Vector, rotaxis
 
@@ -40,7 +41,11 @@ CBINTERNALS = [1.5, 115.5, -123.]
 OINTERNALS = [1.229, 120.500, 0.000]
 SP3ANGLE = 109.470
 SP3DIHS = [60.0, 180.0, 300.0]
+SP2ANGLE = 120.
 HDIS = 1.08
+PEPDIS = 1.32
+PEPDIH = 180.
+CCDIS = 1.5
 
 
 # TODO: consider replace by Bio.PDB equivalent
@@ -594,6 +599,116 @@ def add_hydrogens_side(res, res_library, opt, rules):
                 add_new_atom_to_residue(res, at_id, crs)
     return False
 
+def add_ACE_cap_at_res(res, next_res=None):
+    if 'N' in res:
+        #ADD ACE residue
+        print(residue_id(res), "Adding extra ACE residue")
+
+        print("  Adding new atom C")
+        new_res=Residue((' ', res.id[1]-1, ' '), 'ACE', 0)
+        add_new_atom_to_residue(
+            new_res,
+            'C',
+            build_coords_from_ats_internal(res['N'], res['CA'], res['C'], [PEPDIS, SP2ANGLE, 180.])
+        )
+
+        print("  Adding new atom CA")
+        add_new_atom_to_residue(
+            new_res,
+            'CA',
+            build_coords_trans_CA(new_res['C'], res['N'], res['CA'])
+        )
+
+        print("  Adding new atom O")
+        add_new_atom_to_residue(
+            new_res,
+            'O',
+            build_coords_SP2(OINTERNALS[0], new_res['C'], new_res['CA'], res['N'])
+        )
+
+        # Checking position to insert new res
+        pos = res.get_parent().get_list().index(res)
+        res.get_parent().insert(pos, new_res)
+
+    elif 'CA' in res:
+        #Modify residue to ACE
+        for atm in res.get_atoms():
+            if atm.id not in ('C', 'O', 'CA'):
+                print(residue_id(res))
+                remove_atom_from_res(res, atm.id)
+                print("Removing" + atm.id)
+        res.resname = 'ACE'
+    else:
+        # Mutate to ACE
+        print(residue_id(res), "No CA, Replacing by ACE residue")
+        if next_res is None:
+            print ("Error")
+            return
+        print("  Adding new atom CA")
+        add_new_atom_to_residue(
+            res,
+            'CA',
+            build_coords_trans_CA(res['C'], next_res['N'], next_res['CA'])
+        )
+        if 'O' not in res:
+            print ("  Adding new atom O")
+            add_new_atom_to_residue(res, 'O', build_coords_O(res))
+        res.resname = 'ACE'
+    return False
+
+def add_NME_cap_at_res(res, prev_res=None):
+    if 'C' in res:
+        #ADD NME residue
+        print(residue_id(res), "Adding extra NME residue")
+        if 'O' not in res:
+            print("  Adding missing atom O")
+            add_new_atom_to_residue(
+                res,
+                'O',
+                build_coords_O(res)
+            )
+        print("  Adding new atom N")
+        new_res=Residue((' ', res.id[1]+1, ' '), 'NME', 0)
+        add_new_atom_to_residue(
+            new_res,
+            'N',
+            build_coords_SP2(CCDIS, res['C'], res['CA'], res['O'])
+        )
+        print("  Adding new atom CA")
+        add_new_atom_to_residue(
+            new_res,
+            'CA',
+            build_coords_trans_CA(new_res['N'], res['C'], res['CA'])
+        )
+
+        # Checking position to insert new res
+        pos = res.get_parent().get_list().index(res)
+        res.get_parent().insert(pos+1, new_res)
+
+    elif 'CA' in res:
+        #Modify residue to NME
+        for atm in res.get_atoms():
+            if atm.id not in ('N', 'CA'):
+                print(residue_id(res))
+                remove_atom_from_res(res, atm.id)
+                print("Removing" + atm.id)
+        res.resname = 'NME'
+    else:
+        # Mutate to NME
+        print(residue_id(res), "No CA, Replacing by NME residue")
+        if prev_res is None:
+            print ("Error")
+            return
+        print("  Adding new atom CA")
+        add_new_atom_to_residue(
+            res,
+            'CA',
+            build_coords_trans_CA(res['N'], prev_res['C'], prev_res['CA'])
+        )
+        res.resname = 'NME'
+
+    return False
+
 def build_atom(res, at_id, res_lib, new_res_id):
     if at_id == 'CB':
         coords = build_coords_CB(res)
@@ -629,6 +744,10 @@ def build_coords_O(res): # Get O from Backbone
     """ Calculates cartesian coordinates for a new O atom from backbone.
     """
     return build_coords_from_ats_internal(res['C'], res['CA'], res['N'], OINTERNALS)
+
+def build_coords_trans_CA(at0, at1, at2):
+    return build_coords_from_ats_internal(at0, at1, at2, [CCDIS, SP2ANGLE, PEPDIH])
+
 
 def build_coords_3xSP3(dst, at0, at1, at2):
     """ Generates coordinates for 3 SP3 atoms

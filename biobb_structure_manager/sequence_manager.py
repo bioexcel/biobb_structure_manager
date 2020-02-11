@@ -30,18 +30,18 @@ class SequenceData():
             except IOError:
                 sys.exit("Error loading FASTA")
 
-    def read_sequences(self, strucm, clean=True):
+    def read_sequences(self, strucm, clean=True, cif_warn=False):
         """ Extracts sequences"""
         if clean:
             self.data = {}
             self.has_canonical = False
 
         if not self.has_canonical:
-            self.read_canonical_seqs(strucm)
+            self.read_canonical_seqs(strucm, cif_warn)
 
         self.read_structure_seqs(strucm)
 
-    def read_canonical_seqs(self, strucm):
+    def read_canonical_seqs(self, strucm, cif_warn):
         """ Prepare canonical sequences """
 
         if not strucm.chain_ids:
@@ -55,7 +55,8 @@ class SequenceData():
                 seqs.append(str(rec.seq))
         else:
             if strucm.input_format != 'cif':
-                print("Warning: sequence features only available in mmCIF" +\
+                if cif_warn:
+                    print("Warning: sequence features only available in mmCIF" +\
                     " format or with external fasta input")
                 return 1
             #TODO check for NA
@@ -67,8 +68,10 @@ class SequenceData():
                     chids = strucm.headers['_entity_poly.pdbx_strand_id']
                     seqs = strucm.headers['_entity_poly.pdbx_seq_one_letter_code_can']
             else:
-                print("Warning: sequence data unavailable on cif data")
+                if cif_warn:
+                    print("Warning: sequence data unavailable on cif data")
                 return 1
+        
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
                 if ch_id not in strucm.chain_ids:
