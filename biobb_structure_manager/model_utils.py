@@ -633,17 +633,24 @@ def add_ACE_cap_at_res(res, next_res=None):
     elif 'CA' in res:
         #Modify residue to ACE
         for atm in res.get_atoms():
+            print(residue_id(res), "Replacing by ACE residue")
             if atm.id not in ('C', 'O', 'CA'):
                 print(residue_id(res))
                 remove_atom_from_res(res, atm.id)
-                print("Removing" + atm.id)
+                print("  Removing atom {}".format(atm.id))
         res.resname = 'ACE'
     else:
         # Mutate to ACE
         print(residue_id(res), "No CA, Replacing by ACE residue")
+        #clean
         if next_res is None:
             print ("Error")
             return
+        # Clean residue side chain
+        for atm in res.get_atoms():
+            if atm.id not in ('C', 'O', 'CA'):
+                remove_atom_from_res(res, atm.id)
+                print("  Removing unexpected atom {}".format(atm.id))
         print("  Adding new atom CA")
         add_new_atom_to_residue(
             res,
@@ -652,7 +659,11 @@ def add_ACE_cap_at_res(res, next_res=None):
         )
         if 'O' not in res:
             print ("  Adding new atom O")
-            add_new_atom_to_residue(res, 'O', build_coords_O(res))
+            add_new_atom_to_residue(
+                res, 
+                'O', 
+                build_coords_SP2(OINTERNALS[0], res['C'], res['CA'], next_res['N'])
+            )
         res.resname = 'ACE'
     return False
 
@@ -688,10 +699,10 @@ def add_NME_cap_at_res(res, prev_res=None):
     elif 'CA' in res:
         #Modify residue to NME
         for atm in res.get_atoms():
-            if atm.id not in ('N', 'CA'):
-                print(residue_id(res))
+            if atm.id not in ('N', 'CA', 'C', 'O'):
+                print(residue_id(res), "Replacing by NME residue")
                 remove_atom_from_res(res, atm.id)
-                print("Removing" + atm.id)
+                print("  Removing atom {}".format(atm.id))
         res.resname = 'NME'
     else:
         # Mutate to NME
@@ -699,6 +710,11 @@ def add_NME_cap_at_res(res, prev_res=None):
         if prev_res is None:
             print ("Error")
             return
+        # Clean residue side chain
+        for atm in res.get_atoms():
+            if atm.id not in ('N', 'CA','C','O'):
+                remove_atom_from_res(res, atm.id)
+                print("  Removing unexpected atom {}".format(atm.id))
         print("  Adding new atom CA")
         add_new_atom_to_residue(
             res,
