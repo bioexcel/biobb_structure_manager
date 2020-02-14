@@ -885,10 +885,11 @@ class StructureManager():
         self.atom_renumbering()
         self.modified = True
 
-    def fix_backbone_chain(self, brk_list, key_modeller=''):
+    def fix_backbone_chain(self, brk_list, modeller_key=''):
         """ Fixes backbone breaks using Modeller """
-        if key_modeller:
-            os.environ['KEY_MODELLER9v21'] = key_modeller
+        # environ var depends on MODELLER version!!!
+        if modeller_key:
+            os.environ['KEY_MODELLER9v22'] = modeller_key
         from biobb_structure_manager.modeller_manager import ModellerManager
 
         ch_to_fix = set()
