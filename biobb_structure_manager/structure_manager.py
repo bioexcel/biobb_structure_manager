@@ -633,12 +633,12 @@ class StructureManager():
         """
         self.meta = {}
         if self.input_format == 'cif':
-            self.meta['entry_id'] = self.headers['_entry.id']
-            self.meta['title'] = self.headers['_struct.title']
-            self.meta['method'] = self.headers['_exptl.method']
-            self.meta['keywords'] = self.headers['_struct_keywords.pdbx_keywords']
+            self.meta['entry_id'] = ', '.join(self.headers['_entry.id'])
+            self.meta['title'] = ', '.join(self.headers['_struct.title'])
+            self.meta['method'] = ', '.join(self.headers['_exptl.method'])
+            self.meta['keywords'] = ', '.join(self.headers['_struct_keywords.pdbx_keywords'])
             if '_refine_hist.d_res_high' in self.headers:
-                self.meta['resolution'] = self.headers['_refine_hist.d_res_high']
+                self.meta['resolution'] = ', '.join(self.headers['_refine_hist.d_res_high'])
         else:
             self.meta['title'] = self.headers['name']
             self.meta['method'] = self.headers['structure_method']
