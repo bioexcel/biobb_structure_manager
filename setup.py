@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobb_structure_manager",
-    version="1.0.0",
+    version="1.1.0",
     author="Biobb developers",
     author_email="josep.gelpi@bsc.es",
     description="BioBB_structure_manager is la library to efficiently load and process biomolecular 3D structures.",
@@ -21,7 +21,7 @@ setuptools.setup(
         "Bioexcel": "https://bioexcel.eu/"
     },
     packages=setuptools.find_packages(exclude=['docs', 'test']),
-    install_requires=['biopython==1.73'],
+    install_requires=['biopython==1.76'],
     python_requires='==3.6.*',
     classifiers=(
         "Development Status :: 3 - Alpha",
