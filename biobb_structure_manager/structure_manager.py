@@ -2,7 +2,7 @@
 """
 import warnings
 import os
-import sys
+
 from Bio import BiopythonWarning
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 from Bio.PDB.MMCIFParser import MMCIFParser
@@ -11,7 +11,7 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.parse_pdb_header import parse_pdb_header
 from Bio.PDB.Superimposer import Superimposer
 from Bio.PDB.PDBExceptions import PDBConstructionException
-from Bio.PDB.Residue import Residue
+
 from biobb_structure_manager.mmb_server import MMBPDBList
 from biobb_structure_manager.mutation_manager import MutationManager
 from biobb_structure_manager.data_lib_manager import DataLibManager

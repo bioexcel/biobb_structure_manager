@@ -605,7 +605,7 @@ def add_ACE_cap_at_res(res, next_res=None):
         print(residue_id(res), "Adding extra ACE residue")
 
         print("  Adding new atom C")
-        new_res=Residue((' ', res.id[1]-1, ' '), 'ACE', 0)
+        new_res = Residue((' ', res.id[1]-1, ' '), 'ACE', 0)
         add_new_atom_to_residue(
             new_res,
             'C',
@@ -644,8 +644,8 @@ def add_ACE_cap_at_res(res, next_res=None):
         print(residue_id(res), "No CA, Replacing by ACE residue")
         #clean
         if next_res is None:
-            print ("Error")
-            return
+            print("Error")
+            return True
         # Clean residue side chain
         for atm in res.get_atoms():
             if atm.id not in ('C', 'O', 'CA'):
@@ -658,10 +658,10 @@ def add_ACE_cap_at_res(res, next_res=None):
             build_coords_trans_CA(res['C'], next_res['N'], next_res['CA'])
         )
         if 'O' not in res:
-            print ("  Adding new atom O")
+            print("  Adding new atom O")
             add_new_atom_to_residue(
-                res, 
-                'O', 
+                res,
+                'O',
                 build_coords_SP2(OINTERNALS[0], res['C'], res['CA'], next_res['N'])
             )
         res.resname = 'ACE'
@@ -679,7 +679,7 @@ def add_NME_cap_at_res(res, prev_res=None):
                 build_coords_O(res)
             )
         print("  Adding new atom N")
-        new_res=Residue((' ', res.id[1]+1, ' '), 'NME', 0)
+        new_res = Residue((' ', res.id[1]+1, ' '), 'NME', 0)
         add_new_atom_to_residue(
             new_res,
             'N',
@@ -708,11 +708,11 @@ def add_NME_cap_at_res(res, prev_res=None):
         # Mutate to NME
         print(residue_id(res), "No CA, Replacing by NME residue")
         if prev_res is None:
-            print ("Error")
-            return
+            print("Error")
+            return True
         # Clean residue side chain
         for atm in res.get_atoms():
-            if atm.id not in ('N', 'CA','C','O'):
+            if atm.id not in ('N', 'CA', 'C', 'O'):
                 remove_atom_from_res(res, atm.id)
                 print("  Removing unexpected atom {}".format(atm.id))
         print("  Adding new atom CA")

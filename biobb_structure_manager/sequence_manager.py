@@ -71,7 +71,7 @@ class SequenceData():
                 if cif_warn:
                     print("Warning: sequence data unavailable on cif data")
                 return 1
-        
+
         for i in range(0, len(chids)):
             for ch_id in chids[i].split(','):
                 if ch_id not in strucm.chain_ids:
