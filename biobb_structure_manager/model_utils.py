@@ -612,10 +612,10 @@ def add_ACE_cap_at_res(res, next_res=None):
             build_coords_from_ats_internal(res['N'], res['CA'], res['C'], [PEPDIS, SP2ANGLE, 180.])
         )
 
-        print("  Adding new atom CA")
+        print("  Adding new atom CH3")
         add_new_atom_to_residue(
             new_res,
-            'CA',
+            'CH3',
             build_coords_trans_CA(new_res['C'], res['N'], res['CA'])
         )
 
@@ -623,7 +623,7 @@ def add_ACE_cap_at_res(res, next_res=None):
         add_new_atom_to_residue(
             new_res,
             'O',
-            build_coords_SP2(OINTERNALS[0], new_res['C'], new_res['CA'], res['N'])
+            build_coords_SP2(OINTERNALS[0], new_res['C'], new_res['CH3'], res['N'])
         )
 
         # Checking position to insert new res
@@ -638,6 +638,8 @@ def add_ACE_cap_at_res(res, next_res=None):
                 print(residue_id(res))
                 remove_atom_from_res(res, atm.id)
                 print("  Removing atom {}".format(atm.id))
+            if atm.id == 'CA':
+                rename_atom(res, 'CA', 'CH3')
         res.resname = 'ACE'
     else:
         # Mutate to ACE
@@ -654,15 +656,15 @@ def add_ACE_cap_at_res(res, next_res=None):
         print("  Adding new atom CA")
         add_new_atom_to_residue(
             res,
-            'CA',
+            'CH3',
             build_coords_trans_CA(res['C'], next_res['N'], next_res['CA'])
         )
         if 'O' not in res:
             print("  Adding new atom O")
             add_new_atom_to_residue(
-                res,
-                'O',
-                build_coords_SP2(OINTERNALS[0], res['C'], res['CA'], next_res['N'])
+                res, 
+                'O', 
+                build_coords_SP2(OINTERNALS[0], res['C'], res['CH3'], next_res['N'])
             )
         res.resname = 'ACE'
     return False
@@ -688,7 +690,7 @@ def add_NME_cap_at_res(res, prev_res=None):
         print("  Adding new atom CA")
         add_new_atom_to_residue(
             new_res,
-            'CA',
+            'CH3',
             build_coords_trans_CA(new_res['N'], res['C'], res['CA'])
         )
 
@@ -703,6 +705,8 @@ def add_NME_cap_at_res(res, prev_res=None):
                 print(residue_id(res), "Replacing by NME residue")
                 remove_atom_from_res(res, atm.id)
                 print("  Removing atom {}".format(atm.id))
+            if atm.id == 'CA':
+                rename_atom(res, 'CA', 'CH3')
         res.resname = 'NME'
     else:
         # Mutate to NME
@@ -718,7 +722,7 @@ def add_NME_cap_at_res(res, prev_res=None):
         print("  Adding new atom CA")
         add_new_atom_to_residue(
             res,
-            'CA',
+            'CH3',
             build_coords_trans_CA(res['N'], prev_res['C'], prev_res['CA'])
         )
         res.resname = 'NME'
