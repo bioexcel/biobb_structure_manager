@@ -4,6 +4,6 @@
 Python package to manage 3D structures. Wraps Bio.PDB with additional features.
 
 ## Dependencies:
-* python>=3.6,<=3.7.x
+* python 3.7 (<3.8)
 * Bio.PDB (Biopython 1.76)
 * modeller=9.22
