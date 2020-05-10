@@ -5,13 +5,14 @@
 import json
 import sys
 
-class DataLibManager():
+
+class DataLibManager:
     """ Manages projects' global data file
     """
 
     def __init__(self, file_path):
         try:
-            data_file_h = open(file_path, "r")
+            data_file_h = open(file_path)
             json_map = json.load(data_file_h)
             self.residue_codes = json_map['data_library']['residue_codes']
             self.atom_data = json_map['data_library']['atom_data']
@@ -69,7 +70,7 @@ class DataLibManager():
     def get_atom_lists(self, contact_types):
         """ Gets a list of atoms organized per contact types. """
         atom_lists = {
-            cls_type : self.get_atom_feature_list(cls_type + '_atoms')
+            cls_type: self.get_atom_feature_list(cls_type + '_atoms')
             for cls_type in contact_types
             if cls_type != 'severe'
         }

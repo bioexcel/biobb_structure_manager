@@ -399,7 +399,7 @@ def get_residues_with_H(struc):
 
 def get_backbone_links(struc, backbone_atoms, covlnk, join_models=True):
     """ Get links making the main chain """
-    #TODO differenciate Protein and NA
+    # TODO differenciate Protein and NA
     cov_links = []
     for mod in struc:
         bckats = []
