@@ -11,11 +11,11 @@ setuptools.setup(
     version="3.0.0",
     author="Biobb developers",
     author_email="josep.gelpi@bsc.es",
-    description="BioBB_structure_manager is la library to efficiently load and process biomolecular 3D structures.",
+    description="BioBB_structure_manager is a library to efficiently load and process biomolecular 3D structures.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="Bioinformatics Workflows BioExcel Compatibility",
-    url="https://github.com/bioexcel/biobb_analysis",
+    url="https://github.com/bioexcel/biobb_structure_manager",
     project_urls={
         "Documentation": "http://biobb_structure_manager.readthedocs.io/en/latest/",
         "Bioexcel": "https://bioexcel.eu/"
