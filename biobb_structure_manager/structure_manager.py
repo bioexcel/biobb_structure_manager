@@ -2,7 +2,7 @@
 """
 import warnings
 import os
-from typing import List, Dict, Tuple, Iterable, Mapping, Union, Set
+from typing import List, Dict, Tuple, Mapping, Union, Set, Sequence
 
 
 from Bio.PDB.Residue import Residue
@@ -345,7 +345,7 @@ class StructureManager:
             'res_to_fix': [res for res in chiral_bck_list if not mu.check_chiral_ca(res)]
         }
 
-    def check_r_list_clashes(self, residue_list: Iterable[Residue], contact_types: Iterable[str]) -> Dict[str, Dict[str, Tuple[Residue, Residue, float]]]:
+    def check_r_list_clashes(self, residue_list: Union[Sequence[Residue], Set[Residue]], contact_types: Sequence[str]) -> Dict[str, Dict[str, Tuple[Residue, Residue, float]]]:
         """ Checks clashes originated by a list of residues"""
         return mu.check_r_list_clashes(
             residue_list,
@@ -356,7 +356,7 @@ class StructureManager:
             severe='severe' in contact_types
         )
 
-    def check_rr_clashes(self, res1: Residue, res2: Residue, contact_types: Iterable[str]) -> Dict[str, Tuple[Residue, Residue, float]]:
+    def check_rr_clashes(self, res1: Residue, res2: Residue, contact_types: Sequence[str]) -> Dict[str, Tuple[Residue, Residue, float]]:
         """ Checks all clashes between two residues"""
         return mu.check_rr_clashes(
             res1,
@@ -493,7 +493,7 @@ class StructureManager:
             'not_link_seq_list': not_link_seq_list
         }
 
-    def check_backbone_connect(self, backbone_atoms: Iterable[Atom], covlnk: float):
+    def check_backbone_connect(self, backbone_atoms: Union[Sequence[Atom], Tuple[str, str]], covlnk: float):
         """
         Determines backbone links usign a distance criterium and produces a dict with
         link relationships in the N-term to C-term direction
@@ -514,7 +514,7 @@ class StructureManager:
             self.prev_residue[res2] = res1
             self.next_residue[res1] = res2
 
-    def check_cis_backbone(self) -> Tuple[List[Tuple[Residue, Residue, float]], List[Residue, Residue, float]]:
+    def check_cis_backbone(self) -> Tuple[List[Tuple[Residue, Residue, float]], List[Tuple[Residue, Residue, float]]]:
         """
         Determines omega dihedrals for two bound residues and classifies them
         as normal trans, low angle trans, and cis
@@ -724,7 +724,7 @@ class StructureManager:
             pdbio.set_structure(self.st[mod_id])
             pdbio.save(output_pdb_path)
 
-    def get_all_r2r_distances(self, res_group: Union[str, Iterable[str]], join_models: bool) -> List[Tuple[Residue, Residue, float]]:
+    def get_all_r2r_distances(self, res_group: Union[str, Sequence[str]], join_models: bool) -> List[Tuple[Residue, Residue, float]]:
         """ Determine residue pairs within a given Cutoff distance
             calculated from the first atom available
             Args:
@@ -853,7 +853,7 @@ class StructureManager:
 
         self.modified = True
 
-    def fix_side_chain(self, r_at: Tuple[Residue, Iterable[str]]) -> None:
+    def fix_side_chain(self, r_at: Tuple[Residue, Sequence[str]]) -> None:
         """
         Fix missing side chain atoms in given residue. Triggers **modified** flag
 
@@ -876,7 +876,7 @@ class StructureManager:
         self.atom_renumbering()
         self.modified = True
 
-    def fix_backbone_chain(self, brk_list: Iterable[Atom], modeller_key: str = '') -> str:
+    def fix_backbone_chain(self, brk_list: Sequence[Sequence[Atom]], modeller_key: str = '') -> Union[str, List[str]]:
         """ Fixes backbone breaks using Modeller """
         # environ var depends on MODELLER version!!!
         if modeller_key:
@@ -923,7 +923,9 @@ class StructureManager:
 
         return fixed_segments
 
-    def merge_structure(self, new_st: Structure, mod_id: str, ch_id: str, brk_list: Iterable[Atom], offset: int) -> str:
+    def merge_structure(self, new_st: Structure, mod_id: str, ch_id: str,
+                        brk_list: Union[Sequence[Atom], Sequence[Sequence[Atom]]],
+                        offset: int) -> Union[str, List[str]]:
         spimp = Superimposer()
         fixed_ats = [atm for atm in self.st[mod_id][ch_id].get_atoms() if atm.id == 'CA']
         moving_ats = []
@@ -958,7 +960,7 @@ class StructureManager:
             print()
         return fixed_gaps
 
-    def add_main_chain_caps(self, caps_list: Iterable[Iterable[str]]) -> List[str]:
+    def add_main_chain_caps(self, caps_list: Sequence[Sequence[str]]) -> List[str]:
         # print(caps_list)
         fixed = []
         for cap in caps_list:
@@ -977,7 +979,7 @@ class StructureManager:
         self.update_internals()
         return fixed
 
-    def fix_backbone_O_atoms(self, r_at: Tuple[Residue, Iterable[str]]) -> bool:
+    def fix_backbone_O_atoms(self, r_at: Tuple[Residue, Sequence[str]]) -> bool:
         """Adding missing backbone atoms not affecting main-chain like O and OXT
                 Args:
             **r_at**: tuple as [Bio.PDB.Residue, [list of atom ids]]
@@ -1073,7 +1075,7 @@ class StructureManager:
         """ Detects whether it is C terminal residue."""
         return res not in self.next_residue
 
-    def prepare_mutations(self, mut_list: str) -> List[MutationSet]:
+    def prepare_mutations(self, mut_list: str) -> MutationManager:
         """ Fins residues to mutate from mut_list"""
         mutations = MutationManager(mut_list)
         mutations.prepare_mutations(self.st)
